@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "prompthub-web",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "vinext/server/app-router-entry",
+  "preview_urls": true,
+  "assets": {
+    "not_found_handling": "none"
+  },
+  "vars": {
+    "BACKEND_URL": "https://SEU-BACKEND.onrender.com"
+  }
+}

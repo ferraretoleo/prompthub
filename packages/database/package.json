@@ -1,0 +1,25 @@
+{
+  "name": "@prompthub/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "drizzle-orm": "^0.44.5",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "@types/node": "^24.7.0"
+  }
+}

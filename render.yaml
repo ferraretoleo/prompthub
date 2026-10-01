@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: prompthub-api
+    runtime: node
+    plan: free
+    buildCommand: npm install --include=dev && npm run build:api
+    startCommand: npm run start -w @prompthub/api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false

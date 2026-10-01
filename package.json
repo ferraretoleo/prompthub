@@ -1,0 +1,24 @@
+{
+  "name": "prompthub",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @prompthub/web",
+    "dev:api": "npm run dev -w @prompthub/api",
+    "build:web": "npm run build -w @prompthub/web",
+    "build:api": "npm run build -w @prompthub/database && npm run build -w @prompthub/api",
+    "db:generate": "npm run db:generate -w @prompthub/database",
+    "db:migrate": "npm run db:migrate -w @prompthub/database",
+    "db:seed": "npm run db:seed -w @prompthub/database",
+    "check:web": "npm run check:vinext -w @prompthub/web",
+    "dev:web:vinext": "npm run dev:vinext -w @prompthub/web",
+    "build:web:vinext": "npm run build:vinext -w @prompthub/web",
+    "deploy:web": "npm run deploy:vinext -w @prompthub/web"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
