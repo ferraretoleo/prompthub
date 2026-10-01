@@ -7,6 +7,7 @@ import "./prompt-ui.css";
 import "./community.css";
 import "./security.css";
 import "./moderation.css";
+import "./admin.css";
 
 export const metadata: Metadata = {
   title: {

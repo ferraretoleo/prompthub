@@ -20,7 +20,8 @@ import {
   Settings,
   LogOut,
   Bell,
-  ShieldCheck
+  ShieldCheck,
+  Gauge
 } from "lucide-react";
 
 const nav = [
@@ -42,19 +43,34 @@ type MeResponse = {
 export default function AppShell({
   children
 }: {
-  children: React.ReactNode;
+  children:
+    React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname =
+    usePathname();
 
-  const [username, setUsername] =
-    useState("");
+  const router =
+    useRouter();
 
-  const [search, setSearch] =
-    useState("");
+  const [
+    username,
+    setUsername
+  ] = useState("");
 
-  const [canModerate, setCanModerate] =
-    useState(false);
+  const [
+    search,
+    setSearch
+  ] = useState("");
+
+  const [
+    canModerate,
+    setCanModerate
+  ] = useState(false);
+
+  const [
+    isAdmin,
+    setIsAdmin
+  ] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -62,17 +78,31 @@ export default function AppShell({
     Promise.all([
       fetch(
         "/api/proxy/auth/me",
-        { cache: "no-store" }
+        {
+          cache:
+            "no-store"
+        }
       ),
       fetch(
         "/api/proxy/reports/moderation/access",
-        { cache: "no-store" }
+        {
+          cache:
+            "no-store"
+        }
+      ),
+      fetch(
+        "/api/proxy/admin/access",
+        {
+          cache:
+            "no-store"
+        }
       )
     ])
       .then(
         async ([
           meResponse,
-          moderationResponse
+          moderationResponse,
+          adminResponse
         ]) => {
           const me =
             meResponse.ok
@@ -100,6 +130,20 @@ export default function AppShell({
             setCanModerate(
               Boolean(
                 moderation.allowed
+              )
+            );
+          }
+
+          if (
+            active &&
+            adminResponse.ok
+          ) {
+            const admin =
+              await adminResponse.json();
+
+            setIsAdmin(
+              Boolean(
+                admin.allowed
               )
             );
           }
@@ -132,7 +176,8 @@ export default function AppShell({
     await fetch(
       "/api/auth/logout",
       {
-        method: "POST"
+        method:
+          "POST"
       }
     );
 
@@ -152,6 +197,7 @@ export default function AppShell({
             src="/icons/icon-192.png"
             alt="PromptHub"
           />
+
           <span>
             PromptHub
           </span>
@@ -159,15 +205,21 @@ export default function AppShell({
 
         <form
           className="headerSearchWrap"
-          onSubmit={submitSearch}
+          onSubmit={
+            submitSearch
+          }
         >
           <input
             className="headerSearch"
             placeholder="Pesquisar prompts, autores..."
             value={search}
-            onChange={(event) =>
+            onChange={(
+              event
+            ) =>
               setSearch(
-                event.target.value
+                event
+                  .target
+                  .value
               )
             }
           />
@@ -179,22 +231,31 @@ export default function AppShell({
             type="button"
             aria-label="Notificações"
           >
-            <Bell size={17} />
+            <Bell
+              size={17}
+            />
           </button>
 
           <Link
             href="/new"
             className="headerIconButton"
           >
-            <Plus size={17} />
-            <span>Novo</span>
+            <Plus
+              size={17}
+            />
+            <span>
+              Novo
+            </span>
           </Link>
 
           <Link
             href="/profile"
             className="headerIconButton"
           >
-            <User size={17} />
+            <User
+              size={17}
+            />
+
             <span>
               {username ||
                 "Conta"}
@@ -224,7 +285,8 @@ export default function AppShell({
                     key={href}
                     href={href}
                     className={`navlink ${
-                      pathname === base
+                      pathname ===
+                      base
                         ? "active"
                         : ""
                     }`}
@@ -232,8 +294,11 @@ export default function AppShell({
                     <Icon
                       size={18}
                     />
+
                     <span className="label">
-                      {label}
+                      {
+                        label
+                      }
                     </span>
                   </Link>
                 );
@@ -253,8 +318,29 @@ export default function AppShell({
                 <ShieldCheck
                   size={18}
                 />
+
                 <span className="label">
                   Moderação
+                </span>
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`navlink ${
+                  pathname ===
+                  "/admin"
+                    ? "active"
+                    : ""
+                }`}
+              >
+                <Gauge
+                  size={18}
+                />
+
+                <span className="label">
+                  Administração
                 </span>
               </Link>
             )}
@@ -266,7 +352,10 @@ export default function AppShell({
             href="/new"
             className="sidebarCreate"
           >
-            <Plus size={16} />
+            <Plus
+              size={16}
+            />
+
             <span className="label">
               Novo Prompt
             </span>
@@ -277,13 +366,17 @@ export default function AppShell({
           className="navlink"
           onClick={logout}
           style={{
-            width: "100%",
+            width:
+              "100%",
             border: 0,
             background:
               "transparent"
           }}
         >
-          <LogOut size={18} />
+          <LogOut
+            size={18}
+          />
+
           <span className="label">
             Sair
           </span>
@@ -296,19 +389,33 @@ export default function AppShell({
 
       <nav className="mobilebar">
         <Link href="/dashboard">
-          <Home size={22} />
+          <Home
+            size={22}
+          />
         </Link>
+
         <Link href="/explore">
-          <Search size={22} />
+          <Search
+            size={22}
+          />
         </Link>
+
         <Link href="/new">
-          <Plus size={24} />
+          <Plus
+            size={24}
+          />
         </Link>
+
         <Link href="/dashboard?scope=favorites">
-          <Star size={22} />
+          <Star
+            size={22}
+          />
         </Link>
+
         <Link href="/profile">
-          <User size={22} />
+          <User
+            size={22}
+          />
         </Link>
       </nav>
     </div>
