@@ -32,12 +32,7 @@ async function requireAdminUser(
       isActive: users.isActive
     })
     .from(users)
-    .where(
-      eq(
-        users.id,
-        userId
-      )
-    )
+    .where(eq(users.id, userId))
     .limit(1);
 
   if (
@@ -455,6 +450,13 @@ router.patch(
           updatedAt:
             users.updatedAt
         });
+
+    if (!updated) {
+      return res.status(404).json({
+        error:
+          "Usuário não encontrado ou não foi possível atualizar."
+      });
+    }
 
     await writeAudit(req, {
       userId:
