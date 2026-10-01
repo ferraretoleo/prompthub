@@ -1,0 +1,67 @@
+.moderationFilters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.moderationList {
+  display: grid;
+  gap: 14px;
+}
+
+.moderationCard .panelHeader > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.moderationStatus {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.status-open {
+  color: #ffa657;
+}
+
+.status-reviewing {
+  color: #79c0ff;
+}
+
+.status-resolved {
+  color: #7ee787;
+}
+
+.status-dismissed {
+  color: #8b949e;
+}
+
+.moderationMeta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.moderationDescription {
+  margin: 14px 0 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-soft);
+  white-space: pre-wrap;
+}
+
+.moderationActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}

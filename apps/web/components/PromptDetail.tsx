@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Bot,
+  AlertTriangle,
   Check,
   Copy,
   Eye,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import {
+  FormEvent,
   useEffect,
   useState
 } from "react";
@@ -77,20 +78,37 @@ export default function PromptDetail({
   const [error, setError] =
     useState("");
 
+  const [showReport, setShowReport] =
+    useState(false);
+
+  const [reportMessage, setReportMessage] =
+    useState("");
+
   useEffect(() => {
     async function load() {
       try {
-        const response = await fetch(
-          `/api/proxy/prompts/${promptId}`,
-          { cache: "no-store" }
-        );
+        const response =
+          await fetch(
+            `/api/proxy/prompts/${promptId}`,
+            {
+              cache: "no-store"
+            }
+          );
 
-        if (response.status === 401) {
-          router.replace("/login");
+        if (
+          response.status ===
+          401
+        ) {
+          router.replace(
+            "/login"
+          );
           return;
         }
 
-        if (response.status === 404) {
+        if (
+          response.status ===
+          404
+        ) {
           setError(
             "Prompt não encontrado ou você não possui acesso."
           );
@@ -98,7 +116,8 @@ export default function PromptDetail({
           return;
         }
 
-        const data = await response.json();
+        const data =
+          await response.json();
 
         if (!response.ok) {
           setError(
@@ -109,21 +128,36 @@ export default function PromptDetail({
           return;
         }
 
-        setPrompt(data.prompt);
-        setDisplayContent(data.prompt.content);
-        setDisplayVersion(data.prompt.currentVersion);
+        setPrompt(
+          data.prompt
+        );
+
+        setDisplayContent(
+          data.prompt.content
+        );
+
+        setDisplayVersion(
+          data.prompt.currentVersion
+        );
 
         const versionsResponse =
           await fetch(
             `/api/proxy/prompts/${promptId}/versions`,
-            { cache: "no-store" }
+            {
+              cache: "no-store"
+            }
           );
 
-        if (versionsResponse.ok) {
+        if (
+          versionsResponse.ok
+        ) {
           const versionsData =
             await versionsResponse.json();
 
-          setVersions(versionsData.items || []);
+          setVersions(
+            versionsData.items ||
+              []
+          );
         }
       } catch {
         setError(
@@ -135,28 +169,54 @@ export default function PromptDetail({
     }
 
     load();
-  }, [promptId, router]);
+  }, [
+    promptId,
+    router
+  ]);
 
   async function copyPrompt() {
-    if (!displayContent) return;
+    if (!displayContent) {
+      return;
+    }
 
-    await navigator.clipboard.writeText(displayContent);
+    await navigator
+      .clipboard
+      .writeText(
+        displayContent
+      );
+
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+
+    window.setTimeout(
+      () =>
+        setCopied(
+          false
+        ),
+      1600
+    );
   }
 
   async function toggleFavorite() {
-    if (!prompt || prompt.isOwner) return;
+    if (
+      !prompt ||
+      prompt.isOwner
+    ) {
+      return;
+    }
 
     setBusy(true);
 
     try {
-      const response = await fetch(
-        `/api/proxy/prompts/${prompt.id}/favorite`,
-        { method: "POST" }
-      );
+      const response =
+        await fetch(
+          `/api/proxy/prompts/${prompt.id}/favorite`,
+          {
+            method: "POST"
+          }
+        );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         setError(
@@ -166,39 +226,56 @@ export default function PromptDetail({
         return;
       }
 
-      setPrompt((current) => {
-        if (!current) return current;
+      setPrompt(
+        (current) => {
+          if (!current) {
+            return current;
+          }
 
-        const delta =
-          data.favorite ? 1 : -1;
+          const delta =
+            data.favorite
+              ? 1
+              : -1;
 
-        return {
-          ...current,
-          isFavorite: data.favorite,
-          favoritesCount: Math.max(
-            0,
-            current.favoritesCount + delta
-          )
-        };
-      });
+          return {
+            ...current,
+            isFavorite:
+              data.favorite,
+            favoritesCount:
+              Math.max(
+                0,
+                current
+                  .favoritesCount +
+                  delta
+              )
+          };
+        }
+      );
     } finally {
       setBusy(false);
     }
   }
 
   async function forkPrompt() {
-    if (!prompt) return;
+    if (!prompt) {
+      return;
+    }
 
     setBusy(true);
     setError("");
 
     try {
-      const response = await fetch(
-        `/api/proxy/prompts/${prompt.id}/fork`,
-        { method: "POST" }
-      );
+      const response =
+        await fetch(
+          `/api/proxy/prompts/${prompt.id}/fork`,
+          {
+            method:
+              "POST"
+          }
+        );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         setError(
@@ -217,24 +294,38 @@ export default function PromptDetail({
   }
 
   async function deletePrompt() {
-    if (!prompt?.isOwner) return;
+    if (!prompt?.isOwner) {
+      return;
+    }
 
-    const confirmed = window.confirm(
-      "Excluir este prompt? O prompt deixará de aparecer no PromptHub."
-    );
+    const confirmed =
+      window.confirm(
+        "Excluir este prompt? O prompt deixará de aparecer no PromptHub."
+      );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     setBusy(true);
 
     try {
-      const response = await fetch(
-        `/api/proxy/prompts/${prompt.id}`,
-        { method: "DELETE" }
-      );
+      const response =
+        await fetch(
+          `/api/proxy/prompts/${prompt.id}`,
+          {
+            method:
+              "DELETE"
+          }
+        );
 
-      if (!response.ok && response.status !== 204) {
-        const data = await response.json();
+      if (
+        !response.ok &&
+        response.status !==
+          204
+      ) {
+        const data =
+          await response.json();
 
         setError(
           data.error ||
@@ -251,6 +342,66 @@ export default function PromptDetail({
     }
   }
 
+  async function submitReport(
+    event:
+      FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!prompt) {
+      return;
+    }
+
+    setBusy(true);
+    setReportMessage("");
+
+    const form =
+      new FormData(
+        event.currentTarget
+      );
+
+    const response =
+      await fetch(
+        "/api/proxy/reports",
+        {
+          method: "POST",
+          headers: {
+            "content-type":
+              "application/json"
+          },
+          body: JSON.stringify({
+            promptId:
+              prompt.id,
+            reason:
+              form.get(
+                "reason"
+              ),
+            description:
+              form.get(
+                "description"
+              ) ||
+              null
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (response.ok) {
+      setReportMessage(
+        "Denúncia enviada para análise."
+      );
+    } else {
+      setReportMessage(
+        data.error ||
+          "Não foi possível enviar a denúncia."
+      );
+    }
+
+    setBusy(false);
+  }
+
   if (loading) {
     return (
       <AppShell>
@@ -263,12 +414,16 @@ export default function PromptDetail({
     );
   }
 
-  if (!prompt || error) {
+  if (
+    !prompt ||
+    error
+  ) {
     return (
       <AppShell>
         <div className="contentWrap">
           <div className="empty">
-            {error || "Prompt não encontrado."}
+            {error ||
+              "Prompt não encontrado."}
           </div>
         </div>
       </AppShell>
@@ -283,55 +438,69 @@ export default function PromptDetail({
             PromptHub
           </Link>
           <span>/</span>
-          <span>{prompt.authorUsername}</span>
+          <span>
+            {
+              prompt
+                .authorUsername
+            }
+          </span>
           <span>/</span>
-          <strong>{prompt.slug}</strong>
+          <strong>
+            {prompt.slug}
+          </strong>
         </div>
 
         <div className="pageHeader promptDetailHeader">
           <div className="pageTitleBlock">
             <div className="promptDetailTitleLine">
-              <h1>{prompt.title}</h1>
+              <h1>
+                {prompt.title}
+              </h1>
 
               <span
                 className={`badge ${
-                  prompt.visibility === "PUBLIC"
+                  prompt.visibility ===
+                  "PUBLIC"
                     ? "public"
                     : "private"
                 }`}
               >
-                {prompt.visibility === "PUBLIC" ? (
+                {prompt.visibility ===
+                "PUBLIC" ? (
                   <>
-                    <Globe2 size={12} />
+                    <Globe2
+                      size={12}
+                    />
                     Público
                   </>
                 ) : (
                   <>
-                    <Lock size={12} />
+                    <Lock
+                      size={12}
+                    />
                     Privado
                   </>
                 )}
               </span>
             </div>
 
-            <p>{prompt.description}</p>
+            <p>
+              {
+                prompt
+                  .description
+              }
+            </p>
           </div>
 
           <div className="pageActions">
-            <Link
-              href={`/prompt/${prompt.id}/run`}
-              className="buttonPrimary"
-            >
-              <Bot size={15} />
-              Testar com IA
-            </Link>
-
             {prompt.isOwner && (
               <Link
                 href={`/prompt/${prompt.id}/edit`}
                 className="button"
               >
-                <Pencil size={15} />
+                <Pencil
+                  size={15}
+                />
                 Editar
               </Link>
             )}
@@ -340,27 +509,35 @@ export default function PromptDetail({
               <button
                 type="button"
                 className="button buttonDanger"
-                onClick={deletePrompt}
+                onClick={
+                  deletePrompt
+                }
                 disabled={busy}
               >
-                <Trash2 size={15} />
+                <Trash2
+                  size={15}
+                />
                 Excluir
               </button>
             )}
 
             {!prompt.isOwner &&
-              prompt.visibility === "PUBLIC" && (
+              prompt.visibility ===
+                "PUBLIC" && (
                 <>
                   <button
                     type="button"
                     className="button"
-                    onClick={toggleFavorite}
+                    onClick={
+                      toggleFavorite
+                    }
                     disabled={busy}
                   >
                     <Heart
                       size={15}
                       fill={
-                        prompt.isFavorite
+                        prompt
+                          .isFavorite
                           ? "currentColor"
                           : "none"
                       }
@@ -373,11 +550,33 @@ export default function PromptDetail({
                   <button
                     type="button"
                     className="button"
-                    onClick={forkPrompt}
+                    onClick={
+                      forkPrompt
+                    }
                     disabled={busy}
                   >
-                    <GitFork size={15} />
+                    <GitFork
+                      size={15}
+                    />
                     Fork
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() =>
+                      setShowReport(
+                        (
+                          current
+                        ) =>
+                          !current
+                      )
+                    }
+                  >
+                    <AlertTriangle
+                      size={15}
+                    />
+                    Denunciar
                   </button>
                 </>
               )}
@@ -385,37 +584,145 @@ export default function PromptDetail({
         </div>
 
         <div className="promptStatsBar">
-          <span>@{prompt.authorUsername}</span>
-
           <span>
-            <Eye size={14} />
-            {prompt.viewsCount} visualizações
+            @
+            {
+              prompt
+                .authorUsername
+            }
           </span>
 
           <span>
-            <Heart size={14} />
-            {prompt.favoritesCount} favoritos
+            <Eye
+              size={14}
+            />
+            {
+              prompt
+                .viewsCount
+            }{" "}
+            visualizações
           </span>
 
           <span>
-            <GitFork size={14} />
-            {prompt.forksCount} forks
+            <Heart
+              size={14}
+            />
+            {
+              prompt
+                .favoritesCount
+            }{" "}
+            favoritos
+          </span>
+
+          <span>
+            <GitFork
+              size={14}
+            />
+            {
+              prompt
+                .forksCount
+            }{" "}
+            forks
           </span>
 
           {prompt.categoryName && (
             <span>
-              Categoria: {prompt.categoryName}
+              Categoria:{" "}
+              {
+                prompt
+                  .categoryName
+              }
             </span>
           )}
         </div>
 
+        {showReport &&
+          !prompt.isOwner &&
+          prompt.visibility ===
+            "PUBLIC" && (
+            <form
+              className="reportBox"
+              onSubmit={
+                submitReport
+              }
+            >
+              <strong>
+                Denunciar este prompt
+              </strong>
+
+              <div className="field">
+                <label>
+                  Motivo
+                </label>
+
+                <select
+                  name="reason"
+                  defaultValue="SPAM"
+                >
+                  <option value="SPAM">
+                    Spam
+                  </option>
+                  <option value="INAPPROPRIATE">
+                    Conteúdo inadequado
+                  </option>
+                  <option value="MISLEADING">
+                    Conteúdo enganoso
+                  </option>
+                  <option value="COPYRIGHT">
+                    Direitos autorais
+                  </option>
+                  <option value="OTHER">
+                    Outro
+                  </option>
+                </select>
+              </div>
+
+              <div className="field">
+                <label>
+                  Detalhes
+                </label>
+
+                <textarea
+                  name="description"
+                  maxLength={1000}
+                  placeholder="Descreva o motivo da denúncia."
+                />
+              </div>
+
+              {reportMessage && (
+                <p className="meta">
+                  {
+                    reportMessage
+                  }
+                </p>
+              )}
+
+              <button
+                className="button buttonDanger"
+                disabled={busy}
+              >
+                Enviar denúncia
+              </button>
+            </form>
+          )}
+
         {prompt.tags?.length ? (
-          <div className="tags" style={{ marginBottom: 16 }}>
-            {prompt.tags.map((tag) => (
-              <span key={tag} className="tag">
-                #{tag}
-              </span>
-            ))}
+          <div
+            className="tags"
+            style={{
+              marginBottom: 16
+            }}
+          >
+            {prompt.tags.map(
+              (tag) => (
+                <span
+                  key={tag}
+                  className="tag"
+                >
+                  #{tag}
+                </span>
+              )
+            )}
           </div>
         ) : null}
 
@@ -423,26 +730,37 @@ export default function PromptDetail({
           <section className="panel">
             <div className="panelHeader">
               <div>
-                <strong>Prompt</strong>
+                <strong>
+                  Prompt
+                </strong>
 
                 <span className="meta promptVersionLabel">
-                  versão {displayVersion}
+                  versão{" "}
+                  {
+                    displayVersion
+                  }
                 </span>
               </div>
 
               <button
                 type="button"
                 className="button"
-                onClick={copyPrompt}
+                onClick={
+                  copyPrompt
+                }
               >
                 {copied ? (
                   <>
-                    <Check size={15} />
+                    <Check
+                      size={15}
+                    />
                     Copiado
                   </>
                 ) : (
                   <>
-                    <Copy size={15} />
+                    <Copy
+                      size={15}
+                    />
                     Copiar prompt
                   </>
                 )}
@@ -451,7 +769,9 @@ export default function PromptDetail({
 
             <div className="promptCodeWrap">
               <pre className="promptCode">
-                {displayContent}
+                {
+                  displayContent
+                }
               </pre>
             </div>
           </section>
@@ -460,27 +780,40 @@ export default function PromptDetail({
             <section className="panel">
               <div className="panelHeader">
                 <h3>
-                  <History size={15} />
+                  <History
+                    size={15}
+                  />
                   Histórico
                 </h3>
               </div>
 
               <VersionHistory
                 items={versions}
-                onSelect={(item) => {
-                  setDisplayContent(item.content);
-                  setDisplayVersion(item.version);
+                onSelect={(
+                  item
+                ) => {
+                  setDisplayContent(
+                    item.content
+                  );
+                  setDisplayVersion(
+                    item.version
+                  );
                 }}
               />
             </section>
 
-            {displayVersion !== prompt.currentVersion && (
+            {displayVersion !==
+              prompt.currentVersion && (
               <button
                 type="button"
                 className="button promptCurrentButton"
                 onClick={() => {
-                  setDisplayContent(prompt.content);
-                  setDisplayVersion(prompt.currentVersion);
+                  setDisplayContent(
+                    prompt.content
+                  );
+                  setDisplayVersion(
+                    prompt.currentVersion
+                  );
                 }}
               >
                 Voltar para versão atual

@@ -19,7 +19,8 @@ import {
   User,
   Settings,
   LogOut,
-  Bell
+  Bell,
+  ShieldCheck
 } from "lucide-react";
 
 const nav = [
@@ -38,24 +39,72 @@ type MeResponse = {
   };
 };
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({
+  children
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [search, setSearch] = useState("");
+
+  const [username, setUsername] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [canModerate, setCanModerate] =
+    useState(false);
 
   useEffect(() => {
     let active = true;
 
-    fetch("/api/proxy/auth/me", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return response.json() as Promise<MeResponse>;
-      })
-      .then((data) => {
-        if (!active || !data?.user) return;
-        setUsername(data.user.username || data.user.name || "");
-      })
+    Promise.all([
+      fetch(
+        "/api/proxy/auth/me",
+        { cache: "no-store" }
+      ),
+      fetch(
+        "/api/proxy/reports/moderation/access",
+        { cache: "no-store" }
+      )
+    ])
+      .then(
+        async ([
+          meResponse,
+          moderationResponse
+        ]) => {
+          const me =
+            meResponse.ok
+              ? await meResponse.json()
+              : null;
+
+          if (
+            active &&
+            me?.user
+          ) {
+            setUsername(
+              me.user.username ||
+              me.user.name ||
+              ""
+            );
+          }
+
+          if (
+            active &&
+            moderationResponse.ok
+          ) {
+            const moderation =
+              await moderationResponse.json();
+
+            setCanModerate(
+              Boolean(
+                moderation.allowed
+              )
+            );
+          }
+        }
+      )
       .catch(() => {});
 
     return () => {
@@ -63,9 +112,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
+  function submitSearch(
+    event:
+      FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
-    const q = search.trim();
+
+    const q =
+      search.trim();
 
     router.push(
       q
@@ -75,24 +129,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login");
+    await fetch(
+      "/api/auth/logout",
+      {
+        method: "POST"
+      }
+    );
+
+    router.replace(
+      "/login"
+    );
   }
 
   return (
     <div className="shell">
       <header className="appHeader">
-        <Link href="/dashboard" className="headerBrand">
-          <img src="/icons/icon-192.png" alt="PromptHub" />
-          <span>PromptHub</span>
+        <Link
+          href="/dashboard"
+          className="headerBrand"
+        >
+          <img
+            src="/icons/icon-192.png"
+            alt="PromptHub"
+          />
+          <span>
+            PromptHub
+          </span>
         </Link>
 
-        <form className="headerSearchWrap" onSubmit={submitSearch}>
+        <form
+          className="headerSearchWrap"
+          onSubmit={submitSearch}
+        >
           <input
             className="headerSearch"
             placeholder="Pesquisar prompts, autores..."
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) =>
+              setSearch(
+                event.target.value
+              )
+            }
           />
         </form>
 
@@ -105,65 +182,134 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Bell size={17} />
           </button>
 
-          <Link href="/new" className="headerIconButton">
+          <Link
+            href="/new"
+            className="headerIconButton"
+          >
             <Plus size={17} />
             <span>Novo</span>
           </Link>
 
-          <Link href="/profile" className="headerIconButton">
+          <Link
+            href="/profile"
+            className="headerIconButton"
+          >
             <User size={17} />
-            <span>{username || "Conta"}</span>
+            <span>
+              {username ||
+                "Conta"}
+            </span>
           </Link>
         </div>
       </header>
 
       <aside className="sidebar">
         <div className="sidebarSection">
-          <div className="sidebarTitle">Navegação</div>
+          <div className="sidebarTitle">
+            Navegação
+          </div>
 
           <nav>
-            {nav.map(([href, label, Icon]) => {
-              const base = href.split("?")[0];
+            {nav.map(
+              ([
+                href,
+                label,
+                Icon
+              ]) => {
+                const base =
+                  href.split("?")[0];
 
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`navlink ${pathname === base ? "active" : ""}`}
-                >
-                  <Icon size={18} />
-                  <span className="label">{label}</span>
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`navlink ${
+                      pathname === base
+                        ? "active"
+                        : ""
+                    }`}
+                  >
+                    <Icon
+                      size={18}
+                    />
+                    <span className="label">
+                      {label}
+                    </span>
+                  </Link>
+                );
+              }
+            )}
+
+            {canModerate && (
+              <Link
+                href="/moderation"
+                className={`navlink ${
+                  pathname ===
+                  "/moderation"
+                    ? "active"
+                    : ""
+                }`}
+              >
+                <ShieldCheck
+                  size={18}
+                />
+                <span className="label">
+                  Moderação
+                </span>
+              </Link>
+            )}
           </nav>
         </div>
 
         <div className="sidebarSection">
-          <Link href="/new" className="sidebarCreate">
+          <Link
+            href="/new"
+            className="sidebarCreate"
+          >
             <Plus size={16} />
-            <span className="label">Novo Prompt</span>
+            <span className="label">
+              Novo Prompt
+            </span>
           </Link>
         </div>
 
         <button
           className="navlink"
           onClick={logout}
-          style={{ width: "100%", border: 0, background: "transparent" }}
+          style={{
+            width: "100%",
+            border: 0,
+            background:
+              "transparent"
+          }}
         >
           <LogOut size={18} />
-          <span className="label">Sair</span>
+          <span className="label">
+            Sair
+          </span>
         </button>
       </aside>
 
-      <main className="feed">{children}</main>
+      <main className="feed">
+        {children}
+      </main>
 
       <nav className="mobilebar">
-        <Link href="/dashboard"><Home size={22} /></Link>
-        <Link href="/explore"><Search size={22} /></Link>
-        <Link href="/new"><Plus size={24} /></Link>
-        <Link href="/dashboard?scope=favorites"><Star size={22} /></Link>
-        <Link href="/profile"><User size={22} /></Link>
+        <Link href="/dashboard">
+          <Home size={22} />
+        </Link>
+        <Link href="/explore">
+          <Search size={22} />
+        </Link>
+        <Link href="/new">
+          <Plus size={24} />
+        </Link>
+        <Link href="/dashboard?scope=favorites">
+          <Star size={22} />
+        </Link>
+        <Link href="/profile">
+          <User size={22} />
+        </Link>
       </nav>
     </div>
   );

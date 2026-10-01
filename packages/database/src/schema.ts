@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull(),
   passwordHash: text("password_hash").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  role: varchar("role", { length: 20 }).default("USER").notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -20,7 +21,8 @@ export const users = pgTable("users", {
 }, (t) => [
   uniqueIndex("users_username_uq").on(t.username),
   uniqueIndex("users_email_uq").on(t.email),
-  index("users_is_active_idx").on(t.isActive)
+  index("users_is_active_idx").on(t.isActive),
+  index("users_role_idx").on(t.role)
 ]);
 
 export const categories = pgTable("categories", {
@@ -141,39 +143,6 @@ export const auditLogs = pgTable("audit_logs", {
   index("audit_logs_action_idx").on(t.action),
   index("audit_logs_created_idx").on(t.createdAt)
 ]);
-
-export const promptRuns = pgTable("prompt_runs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  promptId: uuid("prompt_id").notNull().references(() => prompts.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  model: varchar("model", { length: 100 }).notNull(),
-  renderedInput: text("rendered_input").notNull(),
-  outputText: text("output_text"),
-  status: varchar("status", { length: 20 }).notNull(),
-  errorMessage: varchar("error_message", { length: 1000 }),
-  durationMs: integer("duration_ms"),
-  inputTokens: integer("input_tokens"),
-  outputTokens: integer("output_tokens"),
-  executionMode: varchar("execution_mode", { length: 20 }).default("PLATFORM").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
-}, (t) => [
-  index("prompt_runs_prompt_idx").on(t.promptId),
-  index("prompt_runs_user_idx").on(t.userId),
-  index("prompt_runs_created_idx").on(t.createdAt)
-]);
-
-export const userAiSettings = pgTable("user_ai_settings", {
-  userId: uuid("user_id")
-    .primaryKey()
-    .references(() => users.id, { onDelete: "cascade" }),
-  provider: varchar("provider", { length: 30 }).default("OPENAI").notNull(),
-  useOwnKey: boolean("use_own_key").default(false).notNull(),
-  encryptedApiKey: text("encrypted_api_key"),
-  encryptionIv: varchar("encryption_iv", { length: 64 }),
-  encryptionTag: varchar("encryption_tag", { length: 64 }),
-  model: varchar("model", { length: 100 }).default("gpt-5.6-luna").notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
-});
 
 export const usersRelations = relations(users, ({ many }) => ({
   prompts: many(prompts),

@@ -1,0 +1,17 @@
+Remover estes arquivos do repositório:
+
+apps/api/src/routes/runner.ts
+apps/api/src/routes/aiSettings.ts
+apps/api/src/lib/openai.ts
+apps/api/src/lib/secretCrypto.ts
+apps/web/app/prompt/[id]/run/page.tsx
+apps/web/app/runner.css
+
+PowerShell, a partir da raiz do projeto:
+
+git rm apps/api/src/routes/runner.ts
+git rm apps/api/src/routes/aiSettings.ts
+git rm apps/api/src/lib/openai.ts
+git rm apps/api/src/lib/secretCrypto.ts
+git rm "apps/web/app/prompt/[id]/run/page.tsx"
+git rm apps/web/app/runner.css

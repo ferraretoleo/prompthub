@@ -8,8 +8,6 @@ import promptRoutes from "./routes/prompts.js";
 import categoryRoutes from "./routes/categories.js";
 import communityRoutes from "./routes/community.js";
 import reportRoutes from "./routes/reports.js";
-import runnerRoutes from "./routes/runner.js";
-import aiSettingsRoutes from "./routes/aiSettings.js";
 import { mutationRateLimit } from "./middleware/rateLimit.js";
 
 const app = express();
@@ -45,11 +43,7 @@ app.use(
       req.method === "PATCH" ||
       req.method === "DELETE"
     ) {
-      return mutationRateLimit(
-        req,
-        res,
-        next
-      );
+      return mutationRateLimit(req, res, next);
     }
 
     next();
@@ -57,30 +51,9 @@ app.use(
   promptRoutes
 );
 
-app.use(
-  "/api/categories",
-  categoryRoutes
-);
-
-app.use(
-  "/api/community",
-  communityRoutes
-);
-
-app.use(
-  "/api/reports",
-  reportRoutes
-);
-
-app.use(
-  "/api/runner",
-  runnerRoutes
-);
-
-app.use(
-  "/api/ai-settings",
-  aiSettingsRoutes
-);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/community", communityRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use((
   err: unknown,
@@ -96,8 +69,7 @@ app.use((
   );
 
   res.status(500).json({
-    error:
-      "Erro interno do servidor"
+    error: "Erro interno do servidor"
   });
 });
 
