@@ -1,15 +1,6 @@
 import {
-  pgEnum,
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  timestamp,
-  integer,
-  boolean,
-  uniqueIndex,
-  index,
-  primaryKey
+  pgEnum, pgTable, uuid, varchar, text, timestamp, integer, boolean,
+  uniqueIndex, index, primaryKey
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -21,7 +12,6 @@ export const users = pgTable("users", {
   username: varchar("username", { length: 40 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
   passwordHash: text("password_hash").notNull(),
-  role: varchar("role", { length: 20 }).default("USER").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
@@ -30,7 +20,6 @@ export const users = pgTable("users", {
 }, (t) => [
   uniqueIndex("users_username_uq").on(t.username),
   uniqueIndex("users_email_uq").on(t.email),
-  index("users_role_idx").on(t.role),
   index("users_is_active_idx").on(t.isActive)
 ]);
 

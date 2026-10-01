@@ -1,0 +1,5 @@
+Exclua estes arquivos do repositório:
+
+apps/api/src/routes/admin.ts
+apps/api/src/middleware/master.ts
+apps/web/app/admin/users/page.tsx
