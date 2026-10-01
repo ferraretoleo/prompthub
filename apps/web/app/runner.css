@@ -46,6 +46,14 @@
   background: rgba(248, 81, 73, .08);
 }
 
+.runnerStatus {
+  padding: 12px 14px;
+  border: 1px solid rgba(88, 166, 255, .4);
+  border-radius: 6px;
+  color: #79c0ff;
+  background: rgba(56, 139, 253, .08);
+}
+
 .runHistory {
   display: grid;
 }

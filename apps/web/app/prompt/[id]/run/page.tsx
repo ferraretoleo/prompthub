@@ -27,9 +27,7 @@ type ConfigData = {
   };
   variables: string[];
   ai: {
-    executionMode:
-      | "PLATFORM"
-      | "OWN_KEY";
+    executionMode: "PLATFORM" | "OWN_KEY";
     model: string;
     dailyLimit: number;
   };
@@ -38,37 +36,20 @@ type ConfigData = {
 type RunHistory = {
   id: string;
   model: string;
-  outputText?:
-    | string
-    | null;
-  status: string;
-  errorMessage?:
-    | string
-    | null;
-  durationMs?:
-    | number
-    | null;
-  inputTokens?:
-    | number
-    | null;
-  outputTokens?:
-    | number
-    | null;
-  executionMode?:
-    | "PLATFORM"
-    | "OWN_KEY";
+  outputText?: string | null;
+  status: "PENDING" | "SUCCESS" | "ERROR";
+  errorMessage?: string | null;
+  durationMs?: number | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  executionMode?: "PLATFORM" | "OWN_KEY";
   createdAt: string;
 };
 
-async function readJsonSafe(
-  response: Response
-) {
-  const text =
-    await response.text();
+async function readJsonSafe(response: Response) {
+  const text = await response.text();
 
-  if (!text) {
-    return {};
-  }
+  if (!text) return {};
 
   try {
     return JSON.parse(text);
@@ -80,149 +61,95 @@ async function readJsonSafe(
   }
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, ms)
+  );
+}
+
 export default function PromptRunPage({
   params
 }: {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { id } =
-    use(params);
+  const { id } = use(params);
 
-  const [
-    config,
-    setConfig
-  ] =
-    useState<
-      ConfigData | null
-    >(null);
+  const [config, setConfig] =
+    useState<ConfigData | null>(null);
 
-  const [
-    values,
-    setValues
-  ] =
-    useState<
-      Record<
-        string,
-        string
-      >
-    >({});
+  const [values, setValues] =
+    useState<Record<string, string>>({});
 
-  const [
-    output,
-    setOutput
-  ] = useState("");
+  const [output, setOutput] =
+    useState("");
 
-  const [
-    model,
-    setModel
-  ] = useState("");
+  const [model, setModel] =
+    useState("");
 
-  const [
-    history,
-    setHistory
-  ] =
-    useState<
-      RunHistory[]
-    >([]);
+  const [history, setHistory] =
+    useState<RunHistory[]>([]);
 
-  const [
-    error,
-    setError
-  ] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [
-    busy,
-    setBusy
-  ] = useState(false);
+  const [busy, setBusy] =
+    useState(false);
 
-  const [
-    copied,
-    setCopied
-  ] = useState(false);
+  const [statusText, setStatusText] =
+    useState("");
+
+  const [copied, setCopied] =
+    useState(false);
 
   async function load() {
     try {
-      const [
-        configResponse,
-        historyResponse
-      ] =
+      const [configResponse, historyResponse] =
         await Promise.all([
           fetch(
             `/api/proxy/runner/${id}/config`,
-            {
-              cache:
-                "no-store"
-            }
+            { cache: "no-store" }
           ),
           fetch(
             `/api/proxy/runner/${id}/history`,
-            {
-              cache:
-                "no-store"
-            }
+            { cache: "no-store" }
           )
         ]);
 
       const configData =
-        await readJsonSafe(
-          configResponse
-        );
+        await readJsonSafe(configResponse);
 
-      if (
-        configResponse.ok
-      ) {
-        setConfig(
-          configData
-        );
+      if (configResponse.ok) {
+        setConfig(configData);
 
         const initial:
-          Record<
-            string,
-            string
-          > = {};
+          Record<string, string> = {};
 
         for (
           const variable of
-          configData
-            .variables ||
-          []
+          configData.variables || []
         ) {
-          initial[
-            variable
-          ] = "";
+          initial[variable] = "";
         }
 
-        setValues(
-          initial
-        );
+        setValues(initial);
       } else {
         setError(
           configData.error ||
-            `Falha ao carregar configuração (${configResponse.status}).`
+          `Falha ao carregar configuração (${configResponse.status}).`
         );
       }
 
-      if (
-        historyResponse.ok
-      ) {
+      if (historyResponse.ok) {
         const historyData =
-          await readJsonSafe(
-            historyResponse
-          );
+          await readJsonSafe(historyResponse);
 
         setHistory(
-          historyData.items ||
-            []
+          historyData.items || []
         );
       }
-    } catch (
-      loadError
-    ) {
+    } catch (loadError) {
       setError(
-        loadError instanceof
-          Error
+        loadError instanceof Error
           ? loadError.message
           : "Falha ao carregar Prompt Lab."
       );
@@ -235,27 +162,67 @@ export default function PromptRunPage({
 
   const rendered =
     useMemo(() => {
-      if (!config) {
-        return "";
+      if (!config) return "";
+
+      return config.prompt.content.replace(
+        /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g,
+        (_match, key) =>
+          values[key] ?? ""
+      );
+    }, [config, values]);
+
+  async function pollRun(runId: string) {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      await sleep(1500);
+
+      const response = await fetch(
+        `/api/proxy/runner/run/${runId}/status`,
+        { cache: "no-store" }
+      );
+
+      const data =
+        await readJsonSafe(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+          `Falha ao consultar execução (${response.status}).`
+        );
       }
 
-      return config
-        .prompt
-        .content
-        .replace(
-          /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g,
-          (
-            _match,
-            key
-          ) =>
-            values[
-              key
-            ] ?? ""
+      const run =
+        data.run as RunHistory;
+
+      if (run.status === "SUCCESS") {
+        setOutput(
+          run.outputText || ""
         );
-    }, [
-      config,
-      values
-    ]);
+        setModel(
+          run.model || ""
+        );
+        setStatusText(
+          `Concluído em ${run.durationMs ?? 0} ms`
+        );
+        await load();
+        return;
+      }
+
+      if (run.status === "ERROR") {
+        throw new Error(
+          run.errorMessage ||
+          "A execução da IA falhou."
+        );
+      }
+
+      setStatusText(
+        `Processando com ${run.model}...`
+      );
+    }
+
+    throw new Error(
+      "A execução demorou mais que o esperado. Consulte o histórico em alguns instantes."
+    );
+  }
 
   async function run(
     event:
@@ -267,60 +234,53 @@ export default function PromptRunPage({
     setError("");
     setOutput("");
     setModel("");
+    setStatusText("Criando execução...");
 
     try {
-      const response =
-        await fetch(
-          `/api/proxy/runner/${id}/run`,
-          {
-            method:
-              "POST",
-            headers: {
-              "content-type":
-                "application/json"
-            },
-            body:
-              JSON.stringify({
-                values
-              })
-          }
-        );
+      const response = await fetch(
+        `/api/proxy/runner/${id}/run`,
+        {
+          method: "POST",
+          headers: {
+            "content-type":
+              "application/json"
+          },
+          body: JSON.stringify({
+            values
+          })
+        }
+      );
 
       const data =
-        await readJsonSafe(
-          response
-        );
+        await readJsonSafe(response);
 
       if (!response.ok) {
         setError(
           data.error ||
-            `Falha ao executar o prompt. HTTP ${response.status}`
+          `Falha ao iniciar a execução. HTTP ${response.status}`
         );
-
         return;
       }
 
-      setOutput(
-        data.run
-          ?.outputText ||
-          ""
+      if (!data.run?.id) {
+        setError(
+          "O servidor não retornou o ID da execução."
+        );
+        return;
+      }
+
+      setStatusText(
+        "Execução criada. Aguardando a IA..."
       );
 
-      setModel(
-        data.run
-          ?.model ||
-          ""
+      await pollRun(
+        data.run.id
       );
-
-      await load();
-    } catch (
-      runError
-    ) {
+    } catch (runError) {
       setError(
-        runError instanceof
-          Error
-          ? `Falha de conexão: ${runError.message}`
-          : "Não foi possível conectar ao serviço de IA."
+        runError instanceof Error
+          ? runError.message
+          : "Falha ao executar o prompt."
       );
     } finally {
       setBusy(false);
@@ -330,17 +290,12 @@ export default function PromptRunPage({
   async function copyOutput() {
     if (!output) return;
 
-    await navigator
-      .clipboard
-      .writeText(output);
+    await navigator.clipboard.writeText(output);
 
     setCopied(true);
 
     setTimeout(
-      () =>
-        setCopied(
-          false
-        ),
+      () => setCopied(false),
       1500
     );
   }
@@ -363,41 +318,16 @@ export default function PromptRunPage({
       <div className="contentWrap">
         <div className="pageHeader">
           <div className="pageTitleBlock">
-            <h1>
-              Prompt Lab
-            </h1>
+            <h1>Prompt Lab</h1>
 
             <p>
-              Teste “
-              {
-                config
-                  .prompt
-                  .title
-              }
-              ” diretamente
-              com IA.
-              {" "}
-              Modo:
-              {" "}
-              {config.ai
-                .executionMode ===
-              "OWN_KEY"
+              Teste “{config.prompt.title}” diretamente com IA.
+              {" "}Modo:{" "}
+              {config.ai.executionMode === "OWN_KEY"
                 ? "chave própria"
                 : "chave da plataforma"}
-              {" · "}
-              {
-                config
-                  .ai
-                  .model
-              }
-              {" · "}
-              limite diário
-              {" "}
-              {
-                config
-                  .ai
-                  .dailyLimit
-              }
+              {" · "}{config.ai.model}
+              {" · "}limite diário {config.ai.dailyLimit}
             </p>
           </div>
 
@@ -405,9 +335,7 @@ export default function PromptRunPage({
             href={`/prompt/${id}`}
             className="button"
           >
-            <ArrowLeft
-              size={15}
-            />
+            <ArrowLeft size={15} />
             Voltar ao prompt
           </Link>
         </div>
@@ -417,85 +345,56 @@ export default function PromptRunPage({
           className="runnerGrid"
         >
           <div className="runnerMain">
-            {config
-              .variables
-              .length >
-              0 && (
+            {config.variables.length > 0 && (
               <section className="panel">
                 <div className="panelHeader">
-                  <h3>
-                    Variáveis
-                  </h3>
+                  <h3>Variáveis</h3>
                 </div>
 
                 <div className="panelBody runnerVariables">
-                  {config
-                    .variables
-                    .map(
-                      (
-                        variable
-                      ) => (
-                        <div
-                          className="field"
-                          key={
-                            variable
-                          }
-                        >
-                          <label>
-                            {
-                              variable
-                            }
-                          </label>
+                  {config.variables.map(
+                    (variable) => (
+                      <div
+                        className="field"
+                        key={variable}
+                      >
+                        <label>
+                          {variable}
+                        </label>
 
-                          <textarea
-                            value={
-                              values[
-                                variable
-                              ] ||
-                              ""
-                            }
-                            onChange={(
-                              event
-                            ) =>
-                              setValues(
-                                (
-                                  current
-                                ) => ({
-                                  ...current,
-                                  [variable]:
-                                    event
-                                      .target
-                                      .value
-                                })
-                              )
-                            }
-                            style={{
-                              minHeight:
-                                90,
-                              fontFamily:
-                                "inherit"
-                            }}
-                            placeholder={`Valor para {{${variable}}}`}
-                          />
-                        </div>
-                      )
-                    )}
+                        <textarea
+                          value={
+                            values[variable] ||
+                            ""
+                          }
+                          onChange={(event) =>
+                            setValues(
+                              (current) => ({
+                                ...current,
+                                [variable]:
+                                  event.target.value
+                              })
+                            )
+                          }
+                          style={{
+                            minHeight: 90,
+                            fontFamily: "inherit"
+                          }}
+                          placeholder={`Valor para {{${variable}}}`}
+                        />
+                      </div>
+                    )
+                  )}
                 </div>
               </section>
             )}
 
             <section className="panel">
               <div className="panelHeader">
-                <h3>
-                  Prompt final
-                </h3>
+                <h3>Prompt final</h3>
 
                 <span className="meta">
-                  {
-                    rendered.length
-                  }
-                  {" "}
-                  caracteres
+                  {rendered.length} caracteres
                 </span>
               </div>
 
@@ -505,6 +404,12 @@ export default function PromptRunPage({
                 </pre>
               </div>
             </section>
+
+            {statusText && busy && (
+              <div className="runnerStatus">
+                {statusText}
+              </div>
+            )}
 
             {error && (
               <div className="runnerError">
@@ -517,12 +422,10 @@ export default function PromptRunPage({
               className="buttonPrimary runnerExecute"
               disabled={busy}
             >
-              <Play
-                size={16}
-              />
+              <Play size={16} />
 
               {busy
-                ? "Executando..."
+                ? "Processando..."
                 : "Executar com IA"}
             </button>
 
@@ -530,12 +433,8 @@ export default function PromptRunPage({
               <section className="panel runnerResult">
                 <div className="panelHeader">
                   <div>
-                    <Bot
-                      size={16}
-                    />
-                    <strong>
-                      Resposta
-                    </strong>
+                    <Bot size={16} />
+                    <strong>Resposta</strong>
 
                     {model && (
                       <span className="meta">
@@ -547,13 +446,9 @@ export default function PromptRunPage({
                   <button
                     type="button"
                     className="button"
-                    onClick={
-                      copyOutput
-                    }
+                    onClick={copyOutput}
                   >
-                    <Copy
-                      size={15}
-                    />
+                    <Copy size={15} />
                     {copied
                       ? "Copiado"
                       : "Copiar"}
@@ -571,9 +466,7 @@ export default function PromptRunPage({
             <section className="panel">
               <div className="panelHeader">
                 <h3>
-                  <Clock
-                    size={15}
-                  />
+                  <Clock size={15} />
                   Histórico
                 </h3>
               </div>
@@ -581,19 +474,13 @@ export default function PromptRunPage({
               {history.length ? (
                 <div className="runHistory">
                   {history.map(
-                    (
-                      item
-                    ) => (
+                    (item) => (
                       <button
-                        key={
-                          item.id
-                        }
+                        key={item.id}
                         type="button"
                         className="runHistoryItem"
                         onClick={() => {
-                          if (
-                            item.outputText
-                          ) {
+                          if (item.outputText) {
                             setOutput(
                               item.outputText
                             );
@@ -601,12 +488,20 @@ export default function PromptRunPage({
                               item.model
                             );
                           }
+
+                          if (
+                            item.status ===
+                            "ERROR"
+                          ) {
+                            setError(
+                              item.errorMessage ||
+                              "A execução falhou."
+                            );
+                          }
                         }}
                       >
                         <strong>
-                          {
-                            item.model
-                          }
+                          {item.model}
                         </strong>
 
                         <span className="meta">
@@ -618,9 +513,7 @@ export default function PromptRunPage({
                         </span>
 
                         <span className="meta">
-                          {
-                            item.status
-                          }
+                          {item.status}
                           {item.executionMode
                             ? ` · ${
                                 item.executionMode ===
@@ -639,8 +532,7 @@ export default function PromptRunPage({
                 </div>
               ) : (
                 <div className="panelBody meta">
-                  Nenhuma execução
-                  ainda.
+                  Nenhuma execução ainda.
                 </div>
               )}
             </section>
@@ -652,11 +544,10 @@ export default function PromptRunPage({
                 setOutput("");
                 setModel("");
                 setError("");
+                setStatusText("");
               }}
             >
-              <RotateCcw
-                size={15}
-              />
+              <RotateCcw size={15} />
               Limpar resultado
             </button>
           </aside>
