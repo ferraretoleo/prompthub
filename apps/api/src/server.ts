@@ -8,6 +8,8 @@ import promptRoutes from "./routes/prompts.js";
 import categoryRoutes from "./routes/categories.js";
 import communityRoutes from "./routes/community.js";
 import reportRoutes from "./routes/reports.js";
+import runnerRoutes from "./routes/runner.js";
+import aiSettingsRoutes from "./routes/aiSettings.js";
 import { mutationRateLimit } from "./middleware/rateLimit.js";
 
 const app = express();
@@ -68,6 +70,16 @@ app.use(
 app.use(
   "/api/reports",
   reportRoutes
+);
+
+app.use(
+  "/api/runner",
+  runnerRoutes
+);
+
+app.use(
+  "/api/ai-settings",
+  aiSettingsRoutes
 );
 
 app.use((

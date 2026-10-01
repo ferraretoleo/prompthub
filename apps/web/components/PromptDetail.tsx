@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bot,
   Check,
   Copy,
   Eye,
@@ -40,6 +41,7 @@ type PromptDetailData = {
   authorName: string;
   authorUsername: string;
   categoryName?: string | null;
+  tags?: string[];
   isOwner: boolean;
   isFavorite: boolean;
 };
@@ -109,9 +111,7 @@ export default function PromptDetail({
 
         setPrompt(data.prompt);
         setDisplayContent(data.prompt.content);
-        setDisplayVersion(
-          data.prompt.currentVersion
-        );
+        setDisplayVersion(data.prompt.currentVersion);
 
         const versionsResponse =
           await fetch(
@@ -123,9 +123,7 @@ export default function PromptDetail({
           const versionsData =
             await versionsResponse.json();
 
-          setVersions(
-            versionsData.items || []
-          );
+          setVersions(versionsData.items || []);
         }
       } catch {
         setError(
@@ -140,26 +138,15 @@ export default function PromptDetail({
   }, [promptId, router]);
 
   async function copyPrompt() {
-    if (!displayContent) {
-      return;
-    }
+    if (!displayContent) return;
 
-    await navigator.clipboard.writeText(
-      displayContent
-    );
-
+    await navigator.clipboard.writeText(displayContent);
     setCopied(true);
-
-    window.setTimeout(
-      () => setCopied(false),
-      1600
-    );
+    window.setTimeout(() => setCopied(false), 1600);
   }
 
   async function toggleFavorite() {
-    if (!prompt || prompt.isOwner) {
-      return;
-    }
+    if (!prompt || prompt.isOwner) return;
 
     setBusy(true);
 
@@ -182,7 +169,8 @@ export default function PromptDetail({
       setPrompt((current) => {
         if (!current) return current;
 
-        const delta = data.favorite ? 1 : -1;
+        const delta =
+          data.favorite ? 1 : -1;
 
         return {
           ...current,
@@ -199,9 +187,7 @@ export default function PromptDetail({
   }
 
   async function forkPrompt() {
-    if (!prompt) {
-      return;
-    }
+    if (!prompt) return;
 
     setBusy(true);
     setError("");
@@ -231,17 +217,13 @@ export default function PromptDetail({
   }
 
   async function deletePrompt() {
-    if (!prompt?.isOwner) {
-      return;
-    }
+    if (!prompt?.isOwner) return;
 
     const confirmed = window.confirm(
       "Excluir este prompt? O prompt deixará de aparecer no PromptHub."
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setBusy(true);
 
@@ -300,18 +282,10 @@ export default function PromptDetail({
           <Link href="/dashboard">
             PromptHub
           </Link>
-
           <span>/</span>
-
-          <span>
-            {prompt.authorUsername}
-          </span>
-
+          <span>{prompt.authorUsername}</span>
           <span>/</span>
-
-          <strong>
-            {prompt.slug}
-          </strong>
+          <strong>{prompt.slug}</strong>
         </div>
 
         <div className="pageHeader promptDetailHeader">
@@ -321,14 +295,12 @@ export default function PromptDetail({
 
               <span
                 className={`badge ${
-                  prompt.visibility ===
-                  "PUBLIC"
+                  prompt.visibility === "PUBLIC"
                     ? "public"
                     : "private"
                 }`}
               >
-                {prompt.visibility ===
-                "PUBLIC" ? (
+                {prompt.visibility === "PUBLIC" ? (
                   <>
                     <Globe2 size={12} />
                     Público
@@ -342,12 +314,18 @@ export default function PromptDetail({
               </span>
             </div>
 
-            <p>
-              {prompt.description}
-            </p>
+            <p>{prompt.description}</p>
           </div>
 
           <div className="pageActions">
+            <Link
+              href={`/prompt/${prompt.id}/run`}
+              className="buttonPrimary"
+            >
+              <Bot size={15} />
+              Testar com IA
+            </Link>
+
             {prompt.isOwner && (
               <Link
                 href={`/prompt/${prompt.id}/edit`}
@@ -371,8 +349,7 @@ export default function PromptDetail({
             )}
 
             {!prompt.isOwner &&
-              prompt.visibility ===
-                "PUBLIC" && (
+              prompt.visibility === "PUBLIC" && (
                 <>
                   <button
                     type="button"
@@ -408,9 +385,7 @@ export default function PromptDetail({
         </div>
 
         <div className="promptStatsBar">
-          <span>
-            @{prompt.authorUsername}
-          </span>
+          <span>@{prompt.authorUsername}</span>
 
           <span>
             <Eye size={14} />
@@ -434,13 +409,21 @@ export default function PromptDetail({
           )}
         </div>
 
+        {prompt.tags?.length ? (
+          <div className="tags" style={{ marginBottom: 16 }}>
+            {prompt.tags.map((tag) => (
+              <span key={tag} className="tag">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <div className="promptDetailGrid">
           <section className="panel">
             <div className="panelHeader">
               <div>
-                <strong>
-                  Prompt
-                </strong>
+                <strong>Prompt</strong>
 
                 <span className="meta promptVersionLabel">
                   versão {displayVersion}
@@ -485,30 +468,19 @@ export default function PromptDetail({
               <VersionHistory
                 items={versions}
                 onSelect={(item) => {
-                  setDisplayContent(
-                    item.content
-                  );
-
-                  setDisplayVersion(
-                    item.version
-                  );
+                  setDisplayContent(item.content);
+                  setDisplayVersion(item.version);
                 }}
               />
             </section>
 
-            {displayVersion !==
-              prompt.currentVersion && (
+            {displayVersion !== prompt.currentVersion && (
               <button
                 type="button"
                 className="button promptCurrentButton"
                 onClick={() => {
-                  setDisplayContent(
-                    prompt.content
-                  );
-
-                  setDisplayVersion(
-                    prompt.currentVersion
-                  );
+                  setDisplayContent(prompt.content);
+                  setDisplayVersion(prompt.currentVersion);
                 }}
               >
                 Voltar para versão atual

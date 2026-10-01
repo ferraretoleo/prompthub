@@ -1,0 +1,81 @@
+.runnerGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.runnerMain,
+.runnerSide {
+  display: grid;
+  gap: 16px;
+}
+
+.runnerVariables {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.runnerPreview {
+  min-height: 220px;
+}
+
+.runnerExecute {
+  width: fit-content;
+  min-width: 180px;
+}
+
+.runnerResult {
+  margin-top: 4px;
+}
+
+.runnerOutput {
+  padding: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+  color: #e6edf3;
+}
+
+.runnerError {
+  padding: 12px 14px;
+  border: 1px solid rgba(248, 81, 73, .45);
+  border-radius: 6px;
+  color: #ff7b72;
+  background: rgba(248, 81, 73, .08);
+}
+
+.runHistory {
+  display: grid;
+}
+
+.runHistoryItem {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.runHistoryItem:last-child {
+  border-bottom: 0;
+}
+
+.runHistoryItem:hover {
+  background: var(--panel-hover);
+}
+
+@media (max-width: 980px) {
+  .runnerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .runnerVariables {
+    grid-template-columns: 1fr;
+  }
+}
