@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import {
+  FormEvent,
+  useEffect,
+  useState
+} from "react";
+import {
+  usePathname,
+  useRouter
+} from "next/navigation";
 import {
   Home,
   Search,
@@ -17,7 +24,7 @@ import {
 
 const nav = [
   ["/dashboard", "Visão geral", Home],
-  ["/dashboard?scope=public", "Explorar", Search],
+  ["/explore", "Explorar", Search],
   ["/dashboard?scope=mine", "Meus Prompts", Library],
   ["/dashboard?scope=favorites", "Favoritos", Star],
   ["/profile", "Perfil", User],
@@ -35,6 +42,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [username, setUsername] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -55,6 +63,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const q = search.trim();
+
+    router.push(
+      q
+        ? `/explore?q=${encodeURIComponent(q)}`
+        : "/explore"
+    );
+  }
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
@@ -68,12 +87,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <span>PromptHub</span>
         </Link>
 
-        <div className="headerSearchWrap">
-          <input className="headerSearch" placeholder="Pesquisar prompts" />
-        </div>
+        <form className="headerSearchWrap" onSubmit={submitSearch}>
+          <input
+            className="headerSearch"
+            placeholder="Pesquisar prompts, autores..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </form>
 
         <div className="headerActions">
-          <button className="headerIconButton" type="button" aria-label="Notificações">
+          <button
+            className="headerIconButton"
+            type="button"
+            aria-label="Notificações"
+          >
             <Bell size={17} />
           </button>
 
@@ -132,7 +160,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="mobilebar">
         <Link href="/dashboard"><Home size={22} /></Link>
-        <Link href="/dashboard?scope=public"><Search size={22} /></Link>
+        <Link href="/explore"><Search size={22} /></Link>
         <Link href="/new"><Plus size={24} /></Link>
         <Link href="/dashboard?scope=favorites"><Star size={22} /></Link>
         <Link href="/profile"><User size={22} /></Link>

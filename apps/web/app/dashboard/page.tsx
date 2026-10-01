@@ -11,11 +11,28 @@ import {
   useSearchParams
 } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import {
+  Eye,
+  GitFork,
+  Heart,
+  Library,
+  Lock,
+  Plus,
+  Globe2
+} from "lucide-react";
 import AppShell from "@/components/AppShell";
 import PromptCard, {
   type PromptItem
 } from "@/components/PromptCard";
+
+type Stats = {
+  total: number;
+  publicCount: number;
+  privateCount: number;
+  views: number;
+  favorites: number;
+  forks: number;
+};
 
 function DashboardContent() {
   const params = useSearchParams();
@@ -24,39 +41,42 @@ function DashboardContent() {
   const scope = params.get("scope") || "all";
 
   const [items, setItems] = useState<PromptItem[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
     setLoading(true);
 
-    fetch(
-      `/api/proxy/prompts?scope=${encodeURIComponent(scope)}`,
-      { cache: "no-store" }
-    )
-      .then(async (response) => {
-        if (response.status === 401) {
+    Promise.all([
+      fetch(`/api/proxy/prompts?scope=${encodeURIComponent(scope)}`, {
+        cache: "no-store"
+      }),
+      fetch("/api/proxy/community/me/stats", {
+        cache: "no-store"
+      })
+    ])
+      .then(async ([promptResponse, statsResponse]) => {
+        if (promptResponse.status === 401) {
           router.replace("/login");
-          return { items: [] };
+          return;
         }
 
-        return response.json();
+        const promptData = await promptResponse.json();
+        setItems(promptData?.items || []);
+
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData.stats);
+        }
       })
-      .then((data) => {
-        setItems(data?.items || []);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, [scope, router]);
 
   const filteredItems = useMemo(() => {
     const term = query.trim().toLowerCase();
 
-    if (!term) {
-      return items;
-    }
+    if (!term) return items;
 
     return items.filter((item) =>
       [
@@ -66,9 +86,7 @@ function DashboardContent() {
         item.authorName
       ]
         .filter(Boolean)
-        .some((value) =>
-          value.toLowerCase().includes(term)
-        )
+        .some((value) => value.toLowerCase().includes(term))
     );
   }, [items, query]);
 
@@ -92,35 +110,43 @@ function DashboardContent() {
           </div>
 
           <div className="pageActions">
-            <Link
-              href="/new"
-              className="buttonPrimary"
-            >
+            <Link href="/new" className="buttonPrimary">
               <Plus size={16} />
               Novo prompt
             </Link>
           </div>
         </div>
 
+        {scope === "all" && stats && (
+          <div className="statsGrid">
+            <div className="statCard"><Library size={18}/><strong>{stats.total}</strong><span>Meus prompts</span></div>
+            <div className="statCard"><Globe2 size={18}/><strong>{stats.publicCount}</strong><span>Públicos</span></div>
+            <div className="statCard"><Lock size={18}/><strong>{stats.privateCount}</strong><span>Privados</span></div>
+            <div className="statCard"><Eye size={18}/><strong>{stats.views}</strong><span>Visualizações</span></div>
+            <div className="statCard"><Heart size={18}/><strong>{stats.favorites}</strong><span>Favoritos</span></div>
+            <div className="statCard"><GitFork size={18}/><strong>{stats.forks}</strong><span>Forks</span></div>
+          </div>
+        )}
+
         <div className="toolbar">
           <div className="toolbarSearch">
             <input
               value={query}
-              onChange={(event) =>
-                setQuery(event.target.value)
-              }
-              placeholder="Filtrar prompts por nome, descrição ou autor"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Filtrar esta lista"
             />
           </div>
+
+          <Link href="/explore" className="button">
+            Explorar comunidade
+          </Link>
         </div>
 
         <div className="tabs">
           {tabs.map(([key, label]) => (
             <Link
               key={key}
-              className={`tab ${
-                scope === key ? "active" : ""
-              }`}
+              className={`tab ${scope === key ? "active" : ""}`}
               href={`/dashboard?scope=${key}`}
             >
               {label}
@@ -154,13 +180,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="empty">
-          Carregando...
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="empty">Carregando...</div>}>
       <DashboardContent />
     </Suspense>
   );

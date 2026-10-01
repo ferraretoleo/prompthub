@@ -6,9 +6,7 @@ import {
   useState,
   use
 } from "react";
-import {
-  useRouter
-} from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -29,49 +27,30 @@ type PromptData = {
   content: string;
   visibility: "PRIVATE" | "PUBLIC";
   categoryId?: string | null;
+  tags?: string[];
   isOwner: boolean;
 };
 
 export default function EditPromptPage({
   params
 }: {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
   const router = useRouter();
 
-  const [prompt, setPrompt] =
-    useState<PromptData | null>(null);
-
-  const [categories, setCategories] =
-    useState<Category[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [busy, setBusy] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+  const [prompt, setPrompt] = useState<PromptData | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
-        const [
-          promptResponse,
-          categoryResponse
-        ] = await Promise.all([
-          fetch(
-            `/api/proxy/prompts/${id}`,
-            { cache: "no-store" }
-          ),
-          fetch(
-            "/api/proxy/categories",
-            { cache: "no-store" }
-          )
+        const [promptResponse, categoryResponse] = await Promise.all([
+          fetch(`/api/proxy/prompts/${id}`, { cache: "no-store" }),
+          fetch("/api/proxy/categories", { cache: "no-store" })
         ]);
 
         if (promptResponse.status === 401) {
@@ -79,38 +58,26 @@ export default function EditPromptPage({
           return;
         }
 
-        const promptData =
-          await promptResponse.json();
+        const promptData = await promptResponse.json();
 
         if (!promptResponse.ok) {
-          setError(
-            promptData.error ||
-              "Prompt não encontrado"
-          );
+          setError(promptData.error || "Prompt não encontrado");
           return;
         }
 
         if (!promptData.prompt.isOwner) {
-          router.replace(
-            `/prompt/${id}`
-          );
+          router.replace(`/prompt/${id}`);
           return;
         }
 
         setPrompt(promptData.prompt);
 
         if (categoryResponse.ok) {
-          const categoryData =
-            await categoryResponse.json();
-
-          setCategories(
-            categoryData.items || []
-          );
+          const categoryData = await categoryResponse.json();
+          setCategories(categoryData.items || []);
         }
       } catch {
-        setError(
-          "Não foi possível carregar o prompt."
-        );
+        setError("Não foi possível carregar o prompt.");
       } finally {
         setLoading(false);
       }
@@ -119,64 +86,47 @@ export default function EditPromptPage({
     load();
   }, [id, router]);
 
-  async function submit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setBusy(true);
     setError("");
 
-    const form =
-      new FormData(event.currentTarget);
+    const form = new FormData(event.currentTarget);
+
+    const tags = String(form.get("tags") || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .slice(0, 8);
 
     const body = {
       title: form.get("title"),
       slug: form.get("slug"),
-      description:
-        form.get("description"),
+      description: form.get("description"),
       content: form.get("content"),
-      categoryId:
-        form.get("categoryId") ||
-        null,
-      visibility:
-        form.get("visibility"),
-      changeDescription:
-        form.get(
-          "changeDescription"
-        ) || undefined
+      categoryId: form.get("categoryId") || null,
+      visibility: form.get("visibility"),
+      tags,
+      changeDescription: form.get("changeDescription") || undefined
     };
 
     try {
-      const response = await fetch(
-        `/api/proxy/prompts/${id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "content-type":
-              "application/json"
-          },
-          body: JSON.stringify(body)
-        }
-      );
+      const response = await fetch(`/api/proxy/prompts/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body)
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(
-          data.error ||
-            "Não foi possível salvar"
-        );
+        setError(data.error || "Não foi possível salvar");
         return;
       }
 
-      router.replace(
-        `/prompt/${id}`
-      );
+      router.replace(`/prompt/${id}`);
     } catch {
-      setError(
-        "Não foi possível conectar ao servidor."
-      );
+      setError("Não foi possível conectar ao servidor.");
     } finally {
       setBusy(false);
     }
@@ -186,9 +136,7 @@ export default function EditPromptPage({
     return (
       <AppShell>
         <div className="contentWrap">
-          <div className="empty">
-            Carregando prompt...
-          </div>
+          <div className="empty">Carregando prompt...</div>
         </div>
       </AppShell>
     );
@@ -198,10 +146,7 @@ export default function EditPromptPage({
     return (
       <AppShell>
         <div className="contentWrap">
-          <div className="empty">
-            {error ||
-              "Prompt não encontrado."}
-          </div>
+          <div className="empty">{error || "Prompt não encontrado."}</div>
         </div>
       </AppShell>
     );
@@ -213,25 +158,16 @@ export default function EditPromptPage({
         <div className="pageHeader">
           <div className="pageTitleBlock">
             <h1>Editar prompt</h1>
-            <p>
-              As alterações no conteúdo
-              geram uma nova versão.
-            </p>
+            <p>As alterações no conteúdo geram uma nova versão.</p>
           </div>
 
-          <Link
-            href={`/prompt/${id}`}
-            className="button"
-          >
+          <Link href={`/prompt/${id}`} className="button">
             <ArrowLeft size={15} />
             Voltar
           </Link>
         </div>
 
-        <form
-          className="panel editPromptPanel"
-          onSubmit={submit}
-        >
+        <form className="panel editPromptPanel" onSubmit={submit}>
           <div className="panelBody">
             <div className="field">
               <label>Título</label>
@@ -239,9 +175,7 @@ export default function EditPromptPage({
                 name="title"
                 required
                 minLength={3}
-                defaultValue={
-                  prompt.title
-                }
+                defaultValue={prompt.title}
               />
             </div>
 
@@ -250,23 +184,17 @@ export default function EditPromptPage({
               <input
                 name="slug"
                 required
-                defaultValue={
-                  prompt.slug
-                }
+                defaultValue={prompt.slug}
               />
             </div>
 
             <div className="field">
-              <label>
-                Descrição
-              </label>
+              <label>Descrição</label>
               <input
                 name="description"
                 required
                 maxLength={500}
-                defaultValue={
-                  prompt.description
-                }
+                defaultValue={prompt.description}
               />
             </div>
 
@@ -275,75 +203,52 @@ export default function EditPromptPage({
               <textarea
                 name="content"
                 required
-                defaultValue={
-                  prompt.content
-                }
+                defaultValue={prompt.content}
               />
+            </div>
+
+            <div className="field">
+              <label>Tags</label>
+              <input
+                name="tags"
+                defaultValue={(prompt.tags || []).join(", ")}
+                placeholder="sql server, dba, performance"
+              />
+              <span className="meta">
+                Separe por vírgula. Máximo de 8 tags.
+              </span>
             </div>
 
             <div className="editPromptOptions">
               <div className="field">
-                <label>
-                  Categoria
-                </label>
-
+                <label>Categoria</label>
                 <select
                   name="categoryId"
-                  defaultValue={
-                    prompt.categoryId ||
-                    ""
-                  }
+                  defaultValue={prompt.categoryId || ""}
                 >
-                  <option value="">
-                    Sem categoria
-                  </option>
-
-                  {categories.map(
-                    (category) => (
-                      <option
-                        key={
-                          category.id
-                        }
-                        value={
-                          category.id
-                        }
-                      >
-                        {
-                          category.name
-                        }
-                      </option>
-                    )
-                  )}
+                  <option value="">Sem categoria</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="field">
-                <label>
-                  Visibilidade
-                </label>
-
+                <label>Visibilidade</label>
                 <select
                   name="visibility"
-                  defaultValue={
-                    prompt.visibility
-                  }
+                  defaultValue={prompt.visibility}
                 >
-                  <option value="PRIVATE">
-                    Privado
-                  </option>
-
-                  <option value="PUBLIC">
-                    Público
-                  </option>
+                  <option value="PRIVATE">Privado</option>
+                  <option value="PUBLIC">Público</option>
                 </select>
               </div>
             </div>
 
             <div className="field">
-              <label>
-                Descrição da alteração
-              </label>
-
+              <label>Descrição da alteração</label>
               <input
                 name="changeDescription"
                 maxLength={500}
@@ -351,29 +256,17 @@ export default function EditPromptPage({
               />
             </div>
 
-            {error && (
-              <p className="error">
-                {error}
-              </p>
-            )}
+            {error && <p className="error">{error}</p>}
           </div>
 
           <div className="editPromptFooter">
-            <Link
-              href={`/prompt/${id}`}
-              className="button"
-            >
+            <Link href={`/prompt/${id}`} className="button">
               Cancelar
             </Link>
 
-            <button
-              className="buttonPrimary"
-              disabled={busy}
-            >
+            <button className="buttonPrimary" disabled={busy}>
               <Save size={15} />
-              {busy
-                ? "Salvando..."
-                : "Salvar alterações"}
+              {busy ? "Salvando..." : "Salvar alterações"}
             </button>
           </div>
         </form>

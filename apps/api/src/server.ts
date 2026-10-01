@@ -6,6 +6,7 @@ import { env } from "./lib/env.js";
 import authRoutes from "./routes/auth.js";
 import promptRoutes from "./routes/prompts.js";
 import categoryRoutes from "./routes/categories.js";
+import communityRoutes from "./routes/community.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/prompts", promptRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/community", communityRoutes);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("API_ERROR", err instanceof Error ? err.message : "erro desconhecido");

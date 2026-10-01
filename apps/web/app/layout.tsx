@@ -4,6 +4,7 @@ import type {
 } from "next";
 import "./globals.css";
 import "./prompt-ui.css";
+import "./community.css";
 
 export const metadata: Metadata = {
   title: {
@@ -17,13 +18,11 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "PromptHub",
-    statusBarStyle:
-      "black-translucent"
+    statusBarStyle: "black-translucent"
   },
   icons: {
     icon: "/icons/icon-192.png",
-    apple:
-      "/icons/apple-touch-icon.png"
+    apple: "/icons/apple-touch-icon.png"
   }
 };
 

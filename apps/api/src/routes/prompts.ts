@@ -1,13 +1,23 @@
 import { Router } from "express";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  or,
+  sql
+} from "drizzle-orm";
 import { z } from "zod";
 import {
   categories,
   createDb,
   favorites,
+  promptTags,
   promptVersions,
   prompts,
-  users,
+  tags,
+  users
 } from "@prompthub/database";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { slugify } from "../lib/utils.js";
@@ -26,6 +36,67 @@ function getRouteParam(value: string | string[] | undefined): string | null {
   return null;
 }
 
+function normalizeTagNames(values: string[] | undefined) {
+  const unique = new Map<string, string>();
+
+  for (const raw of values ?? []) {
+    const name = raw.trim().replace(/^#/, "").slice(0, 80);
+    const slug = slugify(name);
+
+    if (name && slug) {
+      unique.set(slug, name);
+    }
+  }
+
+  return Array.from(unique.entries())
+    .slice(0, 8)
+    .map(([slug, name]) => ({ slug, name }));
+}
+
+async function syncPromptTags(promptId: string, values: string[] | undefined) {
+  const normalized = normalizeTagNames(values);
+
+  await db
+    .delete(promptTags)
+    .where(eq(promptTags.promptId, promptId));
+
+  if (!normalized.length) {
+    return [];
+  }
+
+  await db
+    .insert(tags)
+    .values(normalized)
+    .onConflictDoNothing({ target: tags.slug });
+
+  const existing = await db
+    .select()
+    .from(tags)
+    .where(inArray(tags.slug, normalized.map((item) => item.slug)));
+
+  if (existing.length) {
+    await db
+      .insert(promptTags)
+      .values(existing.map((tag) => ({
+        promptId,
+        tagId: tag.id
+      })))
+      .onConflictDoNothing();
+  }
+
+  return existing.map((tag) => tag.name);
+}
+
+async function getPromptTagNames(promptId: string) {
+  const rows = await db
+    .select({ name: tags.name })
+    .from(promptTags)
+    .innerJoin(tags, eq(promptTags.tagId, tags.id))
+    .where(eq(promptTags.promptId, promptId));
+
+  return rows.map((row) => row.name);
+}
+
 const createSchema = z.object({
   title: z.string().trim().min(3).max(180),
   slug: z.string().trim().max(200).optional(),
@@ -33,6 +104,7 @@ const createSchema = z.object({
   content: z.string().min(1),
   visibility: z.enum(["PRIVATE", "PUBLIC"]).default("PRIVATE"),
   categoryId: z.string().uuid().nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(80)).max(8).optional()
 });
 
 router.get("/", requireAuth, async (req, res) => {
@@ -58,7 +130,7 @@ router.get("/", requireAuth, async (req, res) => {
         viewsCount: prompts.viewsCount,
         authorName: users.name,
         authorUsername: users.username,
-        avatarUrl: users.avatarUrl,
+        avatarUrl: users.avatarUrl
       })
       .from(favorites)
       .innerJoin(prompts, eq(favorites.promptId, prompts.id))
@@ -67,8 +139,8 @@ router.get("/", requireAuth, async (req, res) => {
         and(
           eq(favorites.userId, ownerId),
           eq(prompts.visibility, "PUBLIC"),
-          isNull(prompts.deletedAt),
-        ),
+          isNull(prompts.deletedAt)
+        )
       )
       .orderBy(desc(favorites.createdAt))
       .limit(limit)
@@ -79,21 +151,16 @@ router.get("/", requireAuth, async (req, res) => {
 
   let access = or(
     eq(prompts.userId, ownerId),
-    eq(prompts.visibility, "PUBLIC"),
+    eq(prompts.visibility, "PUBLIC")
   );
 
-  if (scope === "mine") {
-    access = eq(prompts.userId, ownerId);
-  }
-
-  if (scope === "public") {
-    access = eq(prompts.visibility, "PUBLIC");
-  }
+  if (scope === "mine") access = eq(prompts.userId, ownerId);
+  if (scope === "public") access = eq(prompts.visibility, "PUBLIC");
 
   if (scope === "private") {
     access = and(
       eq(prompts.userId, ownerId),
-      eq(prompts.visibility, "PRIVATE"),
+      eq(prompts.visibility, "PRIVATE")
     );
   }
 
@@ -112,7 +179,7 @@ router.get("/", requireAuth, async (req, res) => {
       viewsCount: prompts.viewsCount,
       authorName: users.name,
       authorUsername: users.username,
-      avatarUrl: users.avatarUrl,
+      avatarUrl: users.avatarUrl
     })
     .from(prompts)
     .innerJoin(users, eq(prompts.userId, users.id))
@@ -130,7 +197,7 @@ router.post("/", requireAuth, async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({
       error: "Dados inválidos",
-      details: parsed.error.flatten(),
+      details: parsed.error.flatten()
     });
   }
 
@@ -151,7 +218,7 @@ router.post("/", requireAuth, async (req, res) => {
         description: parsed.data.description,
         content: parsed.data.content,
         visibility: parsed.data.visibility,
-        categoryId: parsed.data.categoryId ?? null,
+        categoryId: parsed.data.categoryId ?? null
       })
       .returning();
 
@@ -164,14 +231,16 @@ router.post("/", requireAuth, async (req, res) => {
       userId,
       version: 1,
       content: prompt.content,
-      changeDescription: "Versão inicial",
+      changeDescription: "Versão inicial"
     });
+
+    await syncPromptTags(prompt.id, parsed.data.tags);
 
     return res.status(201).json({ prompt });
   } catch (error: any) {
     if (error?.code === "23505") {
       return res.status(409).json({
-        error: "Você já possui um prompt com esse slug",
+        error: "Você já possui um prompt com esse slug"
       });
     }
 
@@ -204,7 +273,7 @@ router.get("/public/:username/:slug", optionalAuth, async (req, res) => {
       authorName: users.name,
       authorUsername: users.username,
       avatarUrl: users.avatarUrl,
-      categoryName: categories.name,
+      categoryName: categories.name
     })
     .from(prompts)
     .innerJoin(users, eq(prompts.userId, users.id))
@@ -214,8 +283,8 @@ router.get("/public/:username/:slug", optionalAuth, async (req, res) => {
         eq(users.username, username),
         eq(prompts.slug, slug),
         eq(prompts.visibility, "PUBLIC"),
-        isNull(prompts.deletedAt),
-      ),
+        isNull(prompts.deletedAt)
+      )
     )
     .limit(1);
 
@@ -228,11 +297,14 @@ router.get("/public/:username/:slug", optionalAuth, async (req, res) => {
     .set({ viewsCount: sql`${prompts.viewsCount} + 1` })
     .where(eq(prompts.id, prompt.id));
 
+  const tagNames = await getPromptTagNames(prompt.id);
+
   return res.json({
     prompt: {
       ...prompt,
-      viewsCount: prompt.viewsCount + 1,
-    },
+      tags: tagNames,
+      viewsCount: prompt.viewsCount + 1
+    }
   });
 });
 
@@ -265,7 +337,7 @@ router.get("/:id", requireAuth, async (req, res) => {
       authorName: users.name,
       authorUsername: users.username,
       avatarUrl: users.avatarUrl,
-      categoryName: categories.name,
+      categoryName: categories.name
     })
     .from(prompts)
     .innerJoin(users, eq(prompts.userId, users.id))
@@ -276,9 +348,9 @@ router.get("/:id", requireAuth, async (req, res) => {
         isNull(prompts.deletedAt),
         or(
           eq(prompts.userId, userId),
-          eq(prompts.visibility, "PUBLIC"),
-        ),
-      ),
+          eq(prompts.visibility, "PUBLIC")
+        )
+      )
     )
     .limit(1);
 
@@ -295,20 +367,23 @@ router.get("/:id", requireAuth, async (req, res) => {
       .where(
         and(
           eq(favorites.userId, userId),
-          eq(favorites.promptId, prompt.id),
-        ),
+          eq(favorites.promptId, prompt.id)
+        )
       )
       .limit(1);
 
     isFavorite = Boolean(favorite);
   }
 
+  const tagNames = await getPromptTagNames(prompt.id);
+
   return res.json({
     prompt: {
       ...prompt,
+      tags: tagNames,
       isOwner: prompt.userId === userId,
-      isFavorite,
-    },
+      isFavorite
+    }
   });
 });
 
@@ -322,14 +397,14 @@ router.patch("/:id", requireAuth, async (req, res) => {
   const parsed = createSchema
     .partial()
     .extend({
-      changeDescription: z.string().trim().max(500).optional(),
+      changeDescription: z.string().trim().max(500).optional()
     })
     .safeParse(req.body);
 
   if (!parsed.success) {
     return res.status(400).json({
       error: "Dados inválidos",
-      details: parsed.error.flatten(),
+      details: parsed.error.flatten()
     });
   }
 
@@ -342,8 +417,8 @@ router.patch("/:id", requireAuth, async (req, res) => {
       and(
         eq(prompts.id, id),
         eq(prompts.userId, userId),
-        isNull(prompts.deletedAt),
-      ),
+        isNull(prompts.deletedAt)
+      )
     )
     .limit(1);
 
@@ -353,7 +428,6 @@ router.patch("/:id", requireAuth, async (req, res) => {
 
   const nextContent = parsed.data.content ?? current.content;
   const contentChanged = nextContent !== current.content;
-
   const nextVersion = contentChanged
     ? current.currentVersion + 1
     : current.currentVersion;
@@ -362,9 +436,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
     .update(prompts)
     .set({
       title: parsed.data.title ?? current.title,
-      slug: parsed.data.slug
-        ? slugify(parsed.data.slug)
-        : current.slug,
+      slug: parsed.data.slug ? slugify(parsed.data.slug) : current.slug,
       description: parsed.data.description ?? current.description,
       content: nextContent,
       visibility: parsed.data.visibility ?? current.visibility,
@@ -373,13 +445,13 @@ router.patch("/:id", requireAuth, async (req, res) => {
           ? current.categoryId
           : parsed.data.categoryId,
       currentVersion: nextVersion,
-      updatedAt: new Date(),
+      updatedAt: new Date()
     })
     .where(
       and(
         eq(prompts.id, current.id),
-        eq(prompts.userId, userId),
-      ),
+        eq(prompts.userId, userId)
+      )
     )
     .returning();
 
@@ -390,8 +462,12 @@ router.patch("/:id", requireAuth, async (req, res) => {
       version: nextVersion,
       content: nextContent,
       changeDescription:
-        parsed.data.changeDescription || "Conteúdo atualizado",
+        parsed.data.changeDescription || "Conteúdo atualizado"
     });
+  }
+
+  if (parsed.data.tags !== undefined) {
+    await syncPromptTags(current.id, parsed.data.tags);
   }
 
   return res.json({ prompt: updated });
@@ -406,16 +482,13 @@ router.delete("/:id", requireAuth, async (req, res) => {
 
   const [deleted] = await db
     .update(prompts)
-    .set({
-      deletedAt: new Date(),
-      updatedAt: new Date(),
-    })
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(
       and(
         eq(prompts.id, id),
         eq(prompts.userId, req.authUser!.id),
-        isNull(prompts.deletedAt),
-      ),
+        isNull(prompts.deletedAt)
+      )
     )
     .returning({ id: prompts.id });
 
@@ -442,9 +515,9 @@ router.get("/:id/versions", requireAuth, async (req, res) => {
         isNull(prompts.deletedAt),
         or(
           eq(prompts.userId, req.authUser!.id),
-          eq(prompts.visibility, "PUBLIC"),
-        ),
-      ),
+          eq(prompts.visibility, "PUBLIC")
+        )
+      )
     )
     .limit(1);
 
@@ -477,8 +550,8 @@ router.post("/:id/favorite", requireAuth, async (req, res) => {
       and(
         eq(prompts.id, id),
         isNull(prompts.deletedAt),
-        eq(prompts.visibility, "PUBLIC"),
-      ),
+        eq(prompts.visibility, "PUBLIC")
+      )
     )
     .limit(1);
 
@@ -492,36 +565,29 @@ router.post("/:id/favorite", requireAuth, async (req, res) => {
     .where(
       and(
         eq(favorites.userId, userId),
-        eq(favorites.promptId, id),
-      ),
+        eq(favorites.promptId, id)
+      )
     )
     .limit(1);
 
   if (existing) {
-    await db
-      .delete(favorites)
-      .where(eq(favorites.id, existing.id));
+    await db.delete(favorites).where(eq(favorites.id, existing.id));
 
     await db
       .update(prompts)
       .set({
-        favoritesCount: sql`GREATEST(${prompts.favoritesCount} - 1, 0)`,
+        favoritesCount: sql`GREATEST(${prompts.favoritesCount} - 1, 0)`
       })
       .where(eq(prompts.id, id));
 
     return res.json({ favorite: false });
   }
 
-  await db.insert(favorites).values({
-    userId,
-    promptId: id,
-  });
+  await db.insert(favorites).values({ userId, promptId: id });
 
   await db
     .update(prompts)
-    .set({
-      favoritesCount: sql`${prompts.favoritesCount} + 1`,
-    })
+    .set({ favoritesCount: sql`${prompts.favoritesCount} + 1` })
     .where(eq(prompts.id, id));
 
   return res.json({ favorite: true });
@@ -543,8 +609,8 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
       and(
         eq(prompts.id, id),
         eq(prompts.visibility, "PUBLIC"),
-        isNull(prompts.deletedAt),
-      ),
+        isNull(prompts.deletedAt)
+      )
     )
     .limit(1);
 
@@ -565,7 +631,7 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
       content: source.content,
       visibility: "PRIVATE",
       categoryId: source.categoryId,
-      forkedFromPromptId: source.id,
+      forkedFromPromptId: source.id
     })
     .returning();
 
@@ -578,14 +644,15 @@ router.post("/:id/fork", requireAuth, async (req, res) => {
     userId,
     version: 1,
     content: fork.content,
-    changeDescription: "Fork criado",
+    changeDescription: "Fork criado"
   });
+
+  const sourceTags = await getPromptTagNames(source.id);
+  await syncPromptTags(fork.id, sourceTags);
 
   await db
     .update(prompts)
-    .set({
-      forksCount: sql`${prompts.forksCount} + 1`,
-    })
+    .set({ forksCount: sql`${prompts.forksCount} + 1` })
     .where(eq(prompts.id, source.id));
 
   return res.status(201).json({ prompt: fork });
