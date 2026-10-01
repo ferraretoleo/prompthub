@@ -1,13 +1,33 @@
 import { z } from "zod";
 
+const optionalEnvString = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? undefined : trimmed;
+  },
+  z.string().min(1).optional()
+);
+
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
   AUTH_SECRET: z.string().min(32),
   FRONTEND_URL: z.string().url(),
   PORT: z.coerce.number().default(10000),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  RESEND_API_KEY: z.string().min(1).optional(),
-  PASSWORD_RESET_FROM_EMAIL: z.string().email().optional()
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
+
+  RESEND_API_KEY: optionalEnvString,
+
+  // Pode receber:
+  // contato@seudominio.com
+  // ou:
+  // PromptHub <contato@seudominio.com>
+  PASSWORD_RESET_FROM_EMAIL: optionalEnvString
 });
 
 export const env = schema.parse(process.env);
