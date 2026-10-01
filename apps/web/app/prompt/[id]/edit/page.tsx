@@ -3,9 +3,12 @@
 import {
   FormEvent,
   useEffect,
-  useState
+  useState,
+  use
 } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useRouter
+} from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -18,33 +21,103 @@ type Category = {
   name: string;
 };
 
-export default function NewPromptPage() {
+type PromptData = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  content: string;
+  visibility: "PRIVATE" | "PUBLIC";
+  categoryId?: string | null;
+  isOwner: boolean;
+};
+
+export default function EditPromptPage({
+  params
+}: {
+  params: Promise<{
+    id: string;
+  }>;
+}) {
+  const { id } = use(params);
   const router = useRouter();
+
+  const [prompt, setPrompt] =
+    useState<PromptData | null>(null);
 
   const [categories, setCategories] =
     useState<Category[]>([]);
 
-  const [error, setError] =
-    useState("");
+  const [loading, setLoading] =
+    useState(true);
 
   const [busy, setBusy] =
     useState(false);
 
+  const [error, setError] =
+    useState("");
+
   useEffect(() => {
-    fetch(
-      "/api/proxy/categories",
-      { cache: "no-store" }
-    )
-      .then((response) =>
-        response.json()
-      )
-      .then((data) =>
-        setCategories(
-          data.items || []
-        )
-      )
-      .catch(() => {});
-  }, []);
+    async function load() {
+      try {
+        const [
+          promptResponse,
+          categoryResponse
+        ] = await Promise.all([
+          fetch(
+            `/api/proxy/prompts/${id}`,
+            { cache: "no-store" }
+          ),
+          fetch(
+            "/api/proxy/categories",
+            { cache: "no-store" }
+          )
+        ]);
+
+        if (promptResponse.status === 401) {
+          router.replace("/login");
+          return;
+        }
+
+        const promptData =
+          await promptResponse.json();
+
+        if (!promptResponse.ok) {
+          setError(
+            promptData.error ||
+              "Prompt não encontrado"
+          );
+          return;
+        }
+
+        if (!promptData.prompt.isOwner) {
+          router.replace(
+            `/prompt/${id}`
+          );
+          return;
+        }
+
+        setPrompt(promptData.prompt);
+
+        if (categoryResponse.ok) {
+          const categoryData =
+            await categoryResponse.json();
+
+          setCategories(
+            categoryData.items || []
+          );
+        }
+      } catch {
+        setError(
+          "Não foi possível carregar o prompt."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, [id, router]);
 
   async function submit(
     event: FormEvent<HTMLFormElement>
@@ -59,25 +132,26 @@ export default function NewPromptPage() {
 
     const body = {
       title: form.get("title"),
-      slug:
-        form.get("slug") ||
-        undefined,
+      slug: form.get("slug"),
       description:
         form.get("description"),
-      content:
-        form.get("content"),
+      content: form.get("content"),
       categoryId:
         form.get("categoryId") ||
         null,
       visibility:
-        form.get("visibility")
+        form.get("visibility"),
+      changeDescription:
+        form.get(
+          "changeDescription"
+        ) || undefined
     };
 
     try {
       const response = await fetch(
-        "/api/proxy/prompts",
+        `/api/proxy/prompts/${id}`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             "content-type":
               "application/json"
@@ -88,21 +162,16 @@ export default function NewPromptPage() {
 
       const data = await response.json();
 
-      if (response.status === 401) {
-        router.replace("/login");
-        return;
-      }
-
       if (!response.ok) {
         setError(
           data.error ||
-            "Não foi possível criar o prompt"
+            "Não foi possível salvar"
         );
         return;
       }
 
       router.replace(
-        `/prompt/${data.prompt.id}`
+        `/prompt/${id}`
       );
     } catch {
       setError(
@@ -113,20 +182,45 @@ export default function NewPromptPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="contentWrap">
+          <div className="empty">
+            Carregando prompt...
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!prompt) {
+    return (
+      <AppShell>
+        <div className="contentWrap">
+          <div className="empty">
+            {error ||
+              "Prompt não encontrado."}
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="contentWrap">
         <div className="pageHeader">
           <div className="pageTitleBlock">
-            <h1>Novo prompt</h1>
+            <h1>Editar prompt</h1>
             <p>
-              Crie um novo prompt no
-              seu repositório.
+              As alterações no conteúdo
+              geram uma nova versão.
             </p>
           </div>
 
           <Link
-            href="/dashboard"
+            href={`/prompt/${id}`}
             className="button"
           >
             <ArrowLeft size={15} />
@@ -141,44 +235,49 @@ export default function NewPromptPage() {
           <div className="panelBody">
             <div className="field">
               <label>Título</label>
-
               <input
                 name="title"
                 required
                 minLength={3}
-                placeholder="SQL Server Performance Analyzer"
+                defaultValue={
+                  prompt.title
+                }
+              />
+            </div>
+
+            <div className="field">
+              <label>Slug</label>
+              <input
+                name="slug"
+                required
+                defaultValue={
+                  prompt.slug
+                }
               />
             </div>
 
             <div className="field">
               <label>
-                Slug opcional
+                Descrição
               </label>
-
-              <input
-                name="slug"
-                placeholder="sql-server-performance-analyzer"
-              />
-            </div>
-
-            <div className="field">
-              <label>Descrição</label>
-
               <input
                 name="description"
                 required
                 maxLength={500}
-                placeholder="Explique em poucas palavras o objetivo do prompt"
+                defaultValue={
+                  prompt.description
+                }
               />
             </div>
 
             <div className="field">
               <label>Prompt</label>
-
               <textarea
                 name="content"
                 required
-                placeholder="Escreva seu prompt aqui. Variáveis podem seguir o padrão {{nome_variavel}}."
+                defaultValue={
+                  prompt.content
+                }
               />
             </div>
 
@@ -190,6 +289,10 @@ export default function NewPromptPage() {
 
                 <select
                   name="categoryId"
+                  defaultValue={
+                    prompt.categoryId ||
+                    ""
+                  }
                 >
                   <option value="">
                     Sem categoria
@@ -221,7 +324,9 @@ export default function NewPromptPage() {
 
                 <select
                   name="visibility"
-                  defaultValue="PRIVATE"
+                  defaultValue={
+                    prompt.visibility
+                  }
                 >
                   <option value="PRIVATE">
                     Privado
@@ -234,6 +339,18 @@ export default function NewPromptPage() {
               </div>
             </div>
 
+            <div className="field">
+              <label>
+                Descrição da alteração
+              </label>
+
+              <input
+                name="changeDescription"
+                maxLength={500}
+                placeholder="Ex.: Ajuste para melhorar análise de queries"
+              />
+            </div>
+
             {error && (
               <p className="error">
                 {error}
@@ -243,7 +360,7 @@ export default function NewPromptPage() {
 
           <div className="editPromptFooter">
             <Link
-              href="/dashboard"
+              href={`/prompt/${id}`}
               className="button"
             >
               Cancelar
@@ -256,7 +373,7 @@ export default function NewPromptPage() {
               <Save size={15} />
               {busy
                 ? "Salvando..."
-                : "Salvar prompt"}
+                : "Salvar alterações"}
             </button>
           </div>
         </form>

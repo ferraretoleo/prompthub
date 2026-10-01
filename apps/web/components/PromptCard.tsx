@@ -6,7 +6,8 @@ import {
   Heart,
   Lock,
   Globe2,
-  History
+  History,
+  Pencil
 } from "lucide-react";
 
 export type PromptItem = {
@@ -28,40 +29,34 @@ export type PromptItem = {
 
 function formatDate(value: string) {
   try {
-    return new Intl.DateTimeFormat(
-      "pt-BR",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-      }
-    ).format(new Date(value));
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    }).format(new Date(value));
   } catch {
     return value;
   }
 }
 
 export default function PromptCard({
-  item
+  item,
+  showEdit = false
 }: {
   item: PromptItem;
+  showEdit?: boolean;
 }) {
-  const href =
-    `/${item.authorUsername}/${item.slug}`;
-
   return (
     <article className="card">
       <div className="cardhead">
         <div className="avatar">
-          {item.authorName
-            ?.slice(0, 1)
-            .toUpperCase() || "P"}
+          {item.authorName?.slice(0, 1).toUpperCase() || "P"}
         </div>
 
         <div className="promptMain">
           <div className="promptTopline">
             <Link
-              href={href}
+              href={`/prompt/${item.id}`}
               className="promptTitle"
             >
               {item.title}
@@ -69,14 +64,12 @@ export default function PromptCard({
 
             <span
               className={`badge ${
-                item.visibility ===
-                "PUBLIC"
+                item.visibility === "PUBLIC"
                   ? "public"
                   : "private"
               }`}
             >
-              {item.visibility ===
-              "PUBLIC" ? (
+              {item.visibility === "PUBLIC" ? (
                 <>
                   <Globe2 size={12} />
                   Público
@@ -91,9 +84,7 @@ export default function PromptCard({
           </div>
 
           <div className="meta">
-            @{item.authorUsername}
-            {" · "}
-            versão {item.currentVersion}
+            @{item.authorUsername} · versão {item.currentVersion}
           </div>
 
           <p className="promptDescription">
@@ -101,13 +92,8 @@ export default function PromptCard({
           </p>
 
           <div className="tags">
-            <span className="tag">
-              Prompt
-            </span>
-
-            <span className="tag">
-              v{item.currentVersion}
-            </span>
+            <span className="tag">Prompt</span>
+            <span className="tag">v{item.currentVersion}</span>
           </div>
 
           <div className="promptMetaRow">
@@ -128,28 +114,28 @@ export default function PromptCard({
 
             <span className="action">
               <History size={14} />
-              Atualizado em{" "}
-              {formatDate(
-                item.updatedAt
-              )}
+              Atualizado em {formatDate(item.updatedAt)}
             </span>
           </div>
 
           <div className="actions">
-            <button
-              type="button"
+            <Link
+              href={`/prompt/${item.id}`}
               className="actionButton"
             >
               <Copy size={14} />
-              Copiar
-            </button>
-
-            <Link
-              href={href}
-              className="actionButton"
-            >
               Abrir prompt
             </Link>
+
+            {showEdit && (
+              <Link
+                href={`/prompt/${item.id}/edit`}
+                className="actionButton"
+              >
+                <Pencil size={14} />
+                Editar
+              </Link>
+            )}
           </div>
         </div>
       </div>

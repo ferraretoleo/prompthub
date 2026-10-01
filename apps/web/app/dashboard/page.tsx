@@ -11,10 +11,7 @@ import {
   useSearchParams
 } from "next/navigation";
 import Link from "next/link";
-import {
-  Plus,
-  Search
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import PromptCard, {
   type PromptItem
@@ -24,34 +21,23 @@ function DashboardContent() {
   const params = useSearchParams();
   const router = useRouter();
 
-  const scope =
-    params.get("scope") || "all";
+  const scope = params.get("scope") || "all";
 
-  const [items, setItems] =
-    useState<PromptItem[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [query, setQuery] =
-    useState("");
+  const [items, setItems] = useState<PromptItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     setLoading(true);
 
     fetch(
-      `/api/proxy/prompts?scope=${encodeURIComponent(
-        scope
-      )}`,
+      `/api/proxy/prompts?scope=${encodeURIComponent(scope)}`,
       { cache: "no-store" }
     )
       .then(async (response) => {
         if (response.status === 401) {
           router.replace("/login");
-
-          return {
-            items: []
-          };
+          return { items: [] };
         }
 
         return response.json();
@@ -65,36 +51,33 @@ function DashboardContent() {
       });
   }, [scope, router]);
 
-  const filteredItems =
-    useMemo(() => {
-      const term =
-        query.trim().toLowerCase();
+  const filteredItems = useMemo(() => {
+    const term = query.trim().toLowerCase();
 
-      if (!term) {
-        return items;
-      }
+    if (!term) {
+      return items;
+    }
 
-      return items.filter((item) =>
-        [
-          item.title,
-          item.description,
-          item.authorUsername,
-          item.authorName
-        ]
-          .filter(Boolean)
-          .some((value) =>
-            value
-              .toLowerCase()
-              .includes(term)
-          )
-      );
-    }, [items, query]);
+    return items.filter((item) =>
+      [
+        item.title,
+        item.description,
+        item.authorUsername,
+        item.authorName
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          value.toLowerCase().includes(term)
+        )
+    );
+  }, [items, query]);
 
   const tabs = [
     ["all", "Todos"],
     ["mine", "Meus Prompts"],
     ["public", "Públicos"],
-    ["private", "Privados"]
+    ["private", "Privados"],
+    ["favorites", "Favoritos"]
   ];
 
   return (
@@ -104,8 +87,7 @@ function DashboardContent() {
           <div className="pageTitleBlock">
             <h1>Prompts</h1>
             <p>
-              Organize seus prompts e
-              explore conteúdos públicos.
+              Organize seus prompts e explore conteúdos públicos.
             </p>
           </div>
 
@@ -125,9 +107,7 @@ function DashboardContent() {
             <input
               value={query}
               onChange={(event) =>
-                setQuery(
-                  event.target.value
-                )
+                setQuery(event.target.value)
               }
               placeholder="Filtrar prompts por nome, descrição ou autor"
             />
@@ -135,21 +115,17 @@ function DashboardContent() {
         </div>
 
         <div className="tabs">
-          {tabs.map(
-            ([key, label]) => (
-              <Link
-                key={key}
-                className={`tab ${
-                  scope === key
-                    ? "active"
-                    : ""
-                }`}
-                href={`/dashboard?scope=${key}`}
-              >
-                {label}
-              </Link>
-            )
-          )}
+          {tabs.map(([key, label]) => (
+            <Link
+              key={key}
+              className={`tab ${
+                scope === key ? "active" : ""
+              }`}
+              href={`/dashboard?scope=${key}`}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
 
         {loading ? (
@@ -158,14 +134,13 @@ function DashboardContent() {
           </div>
         ) : filteredItems.length ? (
           <div className="promptList">
-            {filteredItems.map(
-              (item) => (
-                <PromptCard
-                  key={item.id}
-                  item={item}
-                />
-              )
-            )}
+            {filteredItems.map((item) => (
+              <PromptCard
+                key={item.id}
+                item={item}
+                showEdit={scope === "mine"}
+              />
+            ))}
           </div>
         ) : (
           <div className="empty">
