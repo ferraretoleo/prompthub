@@ -9,6 +9,6 @@
     "not_found_handling": "none"
   },
   "vars": {
-    "BACKEND_URL": "https://SEU-BACKEND.onrender.com"
+    "BACKEND_URL": "https://prompthub-api-bvgj.onrender.com"
   }
 }
