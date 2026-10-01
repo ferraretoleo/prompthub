@@ -4,17 +4,13 @@ import {
   FormEvent,
   useState
 } from "react";
-import {
-  useRouter
-} from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] =
-    useState("");
+export default function ForgotPasswordPage() {
   const [busy, setBusy] =
     useState(false);
+  const [message, setMessage] =
+    useState("");
 
   async function submit(
     event:
@@ -22,7 +18,7 @@ export default function LoginPage() {
   ) {
     event.preventDefault();
     setBusy(true);
-    setError("");
+    setMessage("");
 
     const form =
       new FormData(
@@ -32,7 +28,7 @@ export default function LoginPage() {
     try {
       const response =
         await fetch(
-          "/api/auth/login",
+          "/api/proxy/auth/forgot-password",
           {
             method: "POST",
             headers: {
@@ -41,11 +37,7 @@ export default function LoginPage() {
             },
             body: JSON.stringify({
               email:
-                form.get("email"),
-              password:
-                form.get(
-                  "password"
-                )
+                form.get("email")
             })
           }
         );
@@ -53,20 +45,13 @@ export default function LoginPage() {
       const data =
         await response.json();
 
-      if (!response.ok) {
-        setError(
-          data.error ||
-            "Falha no login"
-        );
-        return;
-      }
-
-      router.replace(
-        "/dashboard"
+      setMessage(
+        data.message ||
+          "Se o e-mail estiver cadastrado, enviaremos as instruções."
       );
     } catch {
-      setError(
-        "Não foi possível conectar ao servidor"
+      setMessage(
+        "Não foi possível processar a solicitação."
       );
     } finally {
       setBusy(false);
@@ -90,14 +75,13 @@ export default function LoginPage() {
         </div>
 
         <h1>
-          Entrar no PromptHub
+          Recuperar senha
         </h1>
 
         <p className="meta">
-          Acesse seus prompts e
-          descubra conteúdos
-          compartilhados pela
-          comunidade.
+          Informe seu e-mail.
+          Enviaremos um link válido
+          por 30 minutos.
         </p>
 
         <div className="field">
@@ -110,40 +94,9 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="field">
-          <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              gap: 12
-            }}
-          >
-            <label>Senha</label>
-
-            <Link
-              href="/forgot-password"
-              style={{
-                color: "#58a6ff",
-                fontSize: 13
-              }}
-            >
-              Esqueci a senha
-            </Link>
-          </div>
-
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete=
-              "current-password"
-          />
-        </div>
-
-        {error && (
-          <p className="error">
-            {error}
+        {message && (
+          <p className="meta">
+            {message}
           </p>
         )}
 
@@ -152,8 +105,8 @@ export default function LoginPage() {
           disabled={busy}
         >
           {busy
-            ? "Entrando..."
-            : "Entrar"}
+            ? "Enviando..."
+            : "Enviar instruções"}
         </button>
 
         <p
@@ -163,14 +116,13 @@ export default function LoginPage() {
             marginTop: 18
           }}
         >
-          Ainda não tem conta?{" "}
           <Link
-            href="/register"
+            href="/login"
             style={{
               color: "#58a6ff"
             }}
           >
-            Criar conta
+            Voltar ao login
           </Link>
         </p>
       </form>

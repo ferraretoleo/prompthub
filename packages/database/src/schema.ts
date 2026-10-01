@@ -98,6 +98,50 @@ export const promptViews = pgTable("prompt_views", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 }, (t) => [index("prompt_views_prompt_idx").on(t.promptId)]);
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+}, (t) => [
+  uniqueIndex("password_reset_tokens_hash_uq").on(t.tokenHash),
+  index("password_reset_tokens_user_idx").on(t.userId),
+  index("password_reset_tokens_expires_idx").on(t.expiresAt)
+]);
+
+export const promptReports = pgTable("prompt_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  promptId: uuid("prompt_id").notNull().references(() => prompts.id, { onDelete: "cascade" }),
+  reportedByUserId: uuid("reported_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  reason: varchar("reason", { length: 40 }).notNull(),
+  description: varchar("description", { length: 1000 }),
+  status: varchar("status", { length: 20 }).default("OPEN").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+}, (t) => [
+  uniqueIndex("prompt_reports_user_prompt_uq").on(t.reportedByUserId, t.promptId),
+  index("prompt_reports_prompt_idx").on(t.promptId),
+  index("prompt_reports_status_idx").on(t.status)
+]);
+
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  action: varchar("action", { length: 60 }).notNull(),
+  entityType: varchar("entity_type", { length: 60 }),
+  entityId: varchar("entity_id", { length: 120 }),
+  ipAddress: varchar("ip_address", { length: 64 }),
+  userAgent: text("user_agent"),
+  details: text("details"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+}, (t) => [
+  index("audit_logs_user_idx").on(t.userId),
+  index("audit_logs_action_idx").on(t.action),
+  index("audit_logs_created_idx").on(t.createdAt)
+]);
+
 export const usersRelations = relations(users, ({ many }) => ({
   prompts: many(prompts),
   favorites: many(favorites)

@@ -1,0 +1,88 @@
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 560px));
+  gap: 20px;
+  align-items: start;
+}
+
+.dangerPanel {
+  border-color: rgba(248, 81, 73, 0.45);
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(1, 4, 9, 0.78);
+}
+
+.modalDialog {
+  width: min(460px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+
+.modalDialog h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.statusPage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.statusPage img {
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+}
+
+.statusPage h1,
+.statusPage h2,
+.statusPage p {
+  margin: 0;
+}
+
+.statusPage p {
+  max-width: 520px;
+  color: var(--muted);
+}
+
+.reportBox {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-soft);
+}
+
+.reportBox textarea {
+  min-height: 100px;
+}
+
+@media (max-width: 900px) {
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+}
