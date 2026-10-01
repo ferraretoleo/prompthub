@@ -1,6 +1,15 @@
 import {
-  pgEnum, pgTable, uuid, varchar, text, timestamp, integer,
-  uniqueIndex, index, primaryKey
+  pgEnum,
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  integer,
+  boolean,
+  uniqueIndex,
+  index,
+  primaryKey
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -12,13 +21,17 @@ export const users = pgTable("users", {
   username: varchar("username", { length: 40 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
   passwordHash: text("password_hash").notNull(),
+  role: varchar("role", { length: 20 }).default("USER").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
 }, (t) => [
   uniqueIndex("users_username_uq").on(t.username),
-  uniqueIndex("users_email_uq").on(t.email)
+  uniqueIndex("users_email_uq").on(t.email),
+  index("users_role_idx").on(t.role),
+  index("users_is_active_idx").on(t.isActive)
 ]);
 
 export const categories = pgTable("categories", {
@@ -96,7 +109,11 @@ export const promptViews = pgTable("prompt_views", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 }, (t) => [index("prompt_views_prompt_idx").on(t.promptId)]);
 
-export const usersRelations = relations(users, ({ many }) => ({ prompts: many(prompts), favorites: many(favorites) }));
+export const usersRelations = relations(users, ({ many }) => ({
+  prompts: many(prompts),
+  favorites: many(favorites)
+}));
+
 export const promptsRelations = relations(prompts, ({ one, many }) => ({
   owner: one(users, { fields: [prompts.userId], references: [users.id] }),
   category: one(categories, { fields: [prompts.categoryId], references: [categories.id] }),
